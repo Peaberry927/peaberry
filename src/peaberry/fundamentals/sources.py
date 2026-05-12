@@ -83,6 +83,11 @@ class CompositeFundamentalsSource:
             raise ValueError("at least one fundamentals source is required")
         self.sources = tuple(sources)
         self.name = "composite_fundamentals"
+        self._source_errors: list[tuple[str, str]] = []
+
+    @property
+    def source_errors(self) -> tuple[tuple[str, str], ...]:
+        return tuple(self._source_errors)
 
     def statements(
         self,
@@ -91,13 +96,17 @@ class CompositeFundamentalsSource:
     ) -> Iterable[FinancialStatement]:
         merged: dict[str, FinancialStatement] = {}
         for source in self.sources:
-            for statement in source.statements(symbol, fiscal_periods):
-                existing = merged.get(statement.fiscal_period)
-                merged[statement.fiscal_period] = (
-                    statement
-                    if existing is None
-                    else existing.merged_with(statement)
-                )
+            try:
+                statements = source.statements(symbol, fiscal_periods)
+                for statement in statements:
+                    existing = merged.get(statement.fiscal_period)
+                    merged[statement.fiscal_period] = (
+                        statement
+                        if existing is None
+                        else existing.merged_with(statement)
+                    )
+            except Exception as exc:
+                self._record_error(source, exc)
         return tuple(merged[period] for period in fiscal_periods if period in merged)
 
     def market_reference(
@@ -105,14 +114,27 @@ class CompositeFundamentalsSource:
         symbol: Symbol,
         fiscal_period: str | None = None,
     ) -> MarketReference | None:
+        failed_sources: set[str] = set()
         if fiscal_period is not None:
             for source in self.sources:
-                reference = source.market_reference(symbol, fiscal_period)
-                if reference is not None and reference.fiscal_period == fiscal_period:
-                    return reference
+                try:
+                    reference = source.market_reference(symbol, fiscal_period)
+                    if reference is not None and reference.fiscal_period == fiscal_period:
+                        return reference
+                except Exception as exc:
+                    self._record_error(source, exc)
+                    failed_sources.add(source.name)
 
         for source in self.sources:
-            reference = source.market_reference(symbol, fiscal_period)
-            if reference is not None:
-                return reference
+            if source.name in failed_sources:
+                continue
+            try:
+                reference = source.market_reference(symbol, fiscal_period)
+                if reference is not None:
+                    return reference
+            except Exception as exc:
+                self._record_error(source, exc)
         return None
+
+    def _record_error(self, source: FundamentalsSource, exc: Exception) -> None:
+        self._source_errors.append((source.name, str(exc)))

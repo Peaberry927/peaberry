@@ -75,8 +75,8 @@ class FundamentalDataResolver:
         bps = self._derived_bps(statement)
         roe = self._derived_roe(statement)
         market_price = self._market_price(statement, market)
-        per = self._derived_per(eps, market, market_price)
-        pbr = self._derived_pbr(bps, market, market_price)
+        per = self._derived_per(statement, eps, market, market_price)
+        pbr = self._derived_pbr(statement, bps, market, market_price)
         dividend_yield = self._derived_dividend_yield(statement, market, market_price)
 
         return FundamentalRow(
@@ -180,30 +180,52 @@ class FundamentalDataResolver:
 
     def _derived_per(
         self,
+        statement: FinancialStatement,
         eps: FundamentalValue | None,
         market: MarketReference | None,
         market_price: Decimal | None,
     ) -> FundamentalValue | None:
-        if eps is None or eps.amount <= 0 or market is None or market_price is None:
+        if market is None:
+            return None
+        if eps is not None and eps.amount > 0 and market_price is not None:
+            return FundamentalValue(
+                amount=market_price / eps.amount,
+                source=self._derived_source_from_values(eps, market),
+                is_estimate=eps.is_estimate,
+            )
+        if statement.net_income is None or statement.net_income <= 0 or market.market_cap is None:
             return None
         return FundamentalValue(
-            amount=market_price / eps.amount,
-            source=self._derived_source_from_values(eps, market),
-            is_estimate=eps.is_estimate,
+            amount=market.market_cap / statement.net_income,
+            source=self._derived_source(statement, ("net_income",), market),
+            is_estimate=statement.estimate_for("net_income"),
         )
 
     def _derived_pbr(
         self,
+        statement: FinancialStatement,
         bps: FundamentalValue | None,
         market: MarketReference | None,
         market_price: Decimal | None,
     ) -> FundamentalValue | None:
-        if bps is None or bps.amount <= 0 or market is None or market_price is None:
+        if market is None:
+            return None
+        if bps is not None and bps.amount > 0 and market_price is not None:
+            return FundamentalValue(
+                amount=market_price / bps.amount,
+                source=self._derived_source_from_values(bps, market),
+                is_estimate=bps.is_estimate,
+            )
+        if (
+            statement.shareholders_equity is None
+            or statement.shareholders_equity <= 0
+            or market.market_cap is None
+        ):
             return None
         return FundamentalValue(
-            amount=market_price / bps.amount,
-            source=self._derived_source_from_values(bps, market),
-            is_estimate=bps.is_estimate,
+            amount=market.market_cap / statement.shareholders_equity,
+            source=self._derived_source(statement, ("shareholders_equity",), market),
+            is_estimate=statement.estimate_for("shareholders_equity"),
         )
 
     def _derived_dividend_yield(

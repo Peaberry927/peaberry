@@ -52,6 +52,11 @@ The `fundamentals` package implements this as:
 
 - `FundamentalsSource`: adapter contract for DART, SEC, IR imports, market data,
   or estimate feeds.
+- `SecCompanyFactsSource`: real SEC Company Facts HTTP adapter for US issuers.
+- `OpenDartFundamentalsSource`: real OpenDART HTTP adapter for Korean issuers
+  when a DART API key and corp code mapping are configured.
+- `YahooChartMarketDataSource`: period-end or latest market price adapter used
+  to fill PER/PBR/dividend-yield inputs.
 - `CompositeFundamentalsSource`: priority merge that preserves high-quality
   values and fills blanks from lower-priority sources.
 - `FundamentalDataResolver`: produces display-ready `FundamentalRow` objects
@@ -59,12 +64,50 @@ The `fundamentals` package implements this as:
 - `FundamentalCoveragePlanner`: converts unresolved cells into acquisition
   requests such as "fetch DART/SEC net income and diluted shares" or "fetch
   KRX/Nasdaq period-end price or market cap".
+- `FundamentalDataPipeline`: runs acquisition, row resolution, source-error
+  capture, and remaining-gap planning in one call.  A failing provider is
+  recorded in `source_errors` without discarding data already acquired from
+  other providers.
 
 Valuation cells are resolved per fiscal period.  If a row has EPS/BPS but PER or
 PBR remains empty, the planner requests a period-specific market reference.  If
 the quote is unavailable, `MarketReference.market_cap` plus diluted shares can be
-used to derive a comparable valuation price.  Market references are currency
-checked before valuation metrics are calculated.
+used to derive a comparable valuation price.  When diluted shares are unavailable
+but market cap is available, PER and PBR can still be computed directly as
+`market_cap / net_income` and `market_cap / shareholders_equity`.  Market
+references are currency checked before valuation metrics are calculated.  Forward
+estimate periods such as `2027.12(E)` use the latest available market price with
+estimated EPS/BPS.
+
+Example production composition:
+
+```python
+import os
+
+from peaberry.domain.fundamentals import Currency
+from peaberry.domain.market import Symbol
+from peaberry.fundamentals import FundamentalDataPipeline, build_fundamentals_source
+
+aapl = Symbol("AAPL")
+hynix = Symbol("000660")
+
+source = build_fundamentals_source(
+    sec_ciks={aapl: "320193"},
+    dart_corp_codes={hynix: "00164779"},
+    dart_api_key=os.environ.get("DART_API_KEY"),
+    market_tickers={aapl: "AAPL", hynix: "000660.KS"},
+    market_currencies={aapl: Currency("USD"), hynix: Currency("KRW")},
+    sec_user_agent="peaberry/0.1 your-email@example.com",
+)
+
+result = FundamentalDataPipeline(source).run(
+    aapl,
+    ["2023.12", "2024.12", "2025.12", "2026.12", "2027.12(E)"],
+)
+print(result.rows)
+print(result.acquisition_requests)
+print(result.source_errors)
+```
 
 ## Quick start
 

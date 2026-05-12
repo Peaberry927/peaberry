@@ -12,6 +12,7 @@ from peaberry.domain.fundamentals import (
 from peaberry.domain.market import Symbol
 from peaberry.fundamentals import (
     CompositeFundamentalsSource,
+    FundamentalDataPipeline,
     FundamentalDataResolver,
     FundamentalCoveragePlanner,
     InMemoryFundamentalsSource,
@@ -164,6 +165,51 @@ class FundamentalsResolverTests(TestCase):
         self.assertEqual(row.per.amount, Decimal("10"))
         self.assertEqual(row.pbr.amount, Decimal("2"))
 
+    def test_market_cap_derives_per_and_pbr_when_share_count_is_missing(self) -> None:
+        symbol = Symbol("000660")
+        source = DataSourceRef(
+            name="OpenDART",
+            kind=SourceKind.REGULATORY_FILING,
+            as_of=datetime(2026, 3, 1, tzinfo=timezone.utc),
+        )
+        market_source = DataSourceRef(
+            name="KRX",
+            kind=SourceKind.MARKET_DATA,
+            as_of=datetime(2026, 3, 2, tzinfo=timezone.utc),
+        )
+        resolver = FundamentalDataResolver(
+            InMemoryFundamentalsSource(
+                name="dart_krx",
+                statements=[
+                    FinancialStatement(
+                        symbol=symbol,
+                        fiscal_period="2024.12",
+                        currency=Currency("KRW"),
+                        source=source,
+                        net_income=Decimal("2000000"),
+                        shareholders_equity=Decimal("5000000"),
+                    )
+                ],
+                market_references=[
+                    MarketReference(
+                        symbol=symbol,
+                        currency=Currency("KRW"),
+                        fiscal_period="2024.12",
+                        as_of=market_source.as_of,
+                        source=market_source,
+                        market_cap=Decimal("10000000"),
+                    )
+                ],
+            )
+        )
+
+        row = resolver.rows(symbol, ["2024.12"])[0]
+
+        self.assertIsNone(row.eps)
+        self.assertIsNone(row.bps)
+        self.assertEqual(row.per.amount, Decimal("5"))
+        self.assertEqual(row.pbr.amount, Decimal("2"))
+
     def test_period_specific_market_reference_fills_yearly_valuation_cells(self) -> None:
         symbol = Symbol("AAPL")
         filing_source = DataSourceRef(
@@ -261,3 +307,44 @@ class FundamentalsResolverTests(TestCase):
         )
         self.assertIn(SourceKind.MARKET_DATA, by_field["per"].recommended_sources)
         self.assertTrue(by_field["revenue"].estimate_allowed)
+
+    def test_composite_source_isolates_source_errors_and_keeps_partial_data(self) -> None:
+        class BrokenMarketSource:
+            name = "broken_market"
+
+            def statements(self, symbol, fiscal_periods):
+                return ()
+
+            def market_reference(self, symbol, fiscal_period=None):
+                raise RuntimeError("rate limited")
+
+        symbol = Symbol("AAPL")
+        source_ref = DataSourceRef(
+            name="SEC",
+            kind=SourceKind.REGULATORY_FILING,
+            as_of=datetime(2026, 2, 1, tzinfo=timezone.utc),
+        )
+        composite = CompositeFundamentalsSource(
+            [
+                InMemoryFundamentalsSource(
+                    name="sec",
+                    statements=[
+                        FinancialStatement(
+                            symbol=symbol,
+                            fiscal_period="2024.12",
+                            currency=Currency("USD"),
+                            source=source_ref,
+                            net_income=Decimal("1000"),
+                            diluted_shares=Decimal("100"),
+                        )
+                    ],
+                ),
+                BrokenMarketSource(),
+            ]
+        )
+
+        result = FundamentalDataPipeline(composite).run(symbol, ["2024.12"])
+
+        self.assertEqual(result.rows[0].eps.amount, Decimal("10"))
+        self.assertIn("per", result.rows[0].missing_fields)
+        self.assertEqual(result.source_errors[0][0], "broken_market")
