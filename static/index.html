@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Peaberry Quant Data</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f1b2d;
+        --panel: #16253d;
+        --panel-2: #1d2f4d;
+        --line: #2a4063;
+        --text: #eef6ff;
+        --muted: #8fb0d9;
+        --accent: #7cc5ff;
+        --good: #45d483;
+        --bad: #ff6b85;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 2rem;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 1180px;
+      }
+
+      h1 {
+        margin: 0 0 0.35rem;
+      }
+
+      p {
+        color: var(--muted);
+      }
+
+      form,
+      .panel {
+        background: linear-gradient(180deg, var(--panel), #132139);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+        margin-top: 1rem;
+        padding: 1rem;
+      }
+
+      input,
+      button {
+        font: inherit;
+      }
+
+      input {
+        background: #0c1728;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--text);
+        padding: 0.7rem 0.75rem;
+        width: 100%;
+      }
+
+      button {
+        background: #24527d;
+        border: 0;
+        border-radius: 999px;
+        color: white;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 0.75rem 1rem;
+      }
+
+      button.secondary {
+        background: #314866;
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: 1.2fr 0.8fr 1fr 1.2fr auto;
+      }
+
+      .cards,
+      .valuation-grid,
+      .unit-grid {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      }
+
+      .card,
+      .unit-card {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 0.85rem;
+      }
+
+      .label {
+        color: var(--muted);
+        display: block;
+        font-size: 0.82rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .value {
+        font-size: 1.15rem;
+        font-weight: 800;
+      }
+
+      .unit {
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-left: 0.25rem;
+      }
+
+      .table-wrap {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        margin-top: 0.75rem;
+        overflow: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 920px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid rgba(143, 176, 217, 0.16);
+        padding: 0.75rem;
+        text-align: right;
+        vertical-align: middle;
+      }
+
+      th {
+        background: #071426;
+        color: #cfe4ff;
+        font-size: 0.86rem;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+
+      th:first-child,
+      td:first-child,
+      th:last-child,
+      td:last-child {
+        text-align: left;
+      }
+
+      th span {
+        color: var(--muted);
+        display: block;
+        font-size: 0.76rem;
+        font-weight: 600;
+        margin-top: 0.2rem;
+      }
+
+      .missing {
+        color: var(--muted);
+      }
+
+      .fill-cell {
+        align-items: center;
+        display: grid;
+        gap: 0.35rem;
+        grid-template-columns: minmax(96px, 1fr) auto;
+      }
+
+      .fill-cell input {
+        min-width: 90px;
+        padding: 0.45rem;
+        text-align: right;
+      }
+
+      .source {
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .notes {
+        color: var(--muted);
+        line-height: 1.6;
+        margin: 0.75rem 0 0;
+        padding-left: 1.25rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+
+      pre {
+        background: #111827;
+        color: #e5e7eb;
+        overflow: auto;
+        padding: 1rem;
+        white-space: pre-wrap;
+      }
+
+      .error {
+        color: var(--bad);
+      }
+
+      @media (max-width: 780px) {
+        body {
+          padding: 1rem;
+        }
+
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Peaberry Quant Data</h1>
+      <p>
+        국내/해외 종목의 재무 금액, 주당 지표, 배수, % 지표를 별도 단위로 표시합니다.
+        빈 칸은 표시 단위 기준으로 직접 입력해 보완할 수 있습니다.
+      </p>
+      <form id="snapshot-form">
+        <div class="form-grid">
+          <input id="ticker" placeholder="Ticker, e.g. 000660 or AAPL" required />
+          <input id="market" placeholder="Market, e.g. KOSPI or US" />
+          <input id="corp-code" placeholder="OpenDART corp_code" />
+          <input id="years" placeholder="Years, e.g. 2024,2023,2022" />
+          <button type="submit">조회</button>
+        </div>
+      </form>
+      <section id="output" class="panel">종목을 입력하면 단위가 주석 처리된 표가 표시됩니다.</section>
+    </main>
+    <script>
+      const form = document.getElementById("snapshot-form");
+      const output = document.getElementById("output");
+      let lastSnapshot = null;
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const ticker = document.getElementById("ticker").value.trim();
+        const market = document.getElementById("market").value.trim();
+        const corpCode = document.getElementById("corp-code").value.trim();
+        const years = document.getElementById("years").value.trim();
+        const params = new URLSearchParams();
+        if (market) params.set("market", market);
+        if (corpCode) params.set("corp_code", corpCode);
+        if (years) params.set("years", years);
+
+        output.textContent = "Loading...";
+        try {
+          const response = await fetch(`/api/snapshot/${encodeURIComponent(ticker)}?${params.toString()}`);
+          const body = await response.json();
+          if (!response.ok) {
+            throw new Error(body.detail || "Snapshot request failed");
+          }
+          lastSnapshot = body;
+          renderSnapshot(body);
+        } catch (error) {
+          output.innerHTML = `<strong class="error">오류:</strong> ${escapeHtml(error.message)}`;
+        }
+      });
+
+      output.addEventListener("input", (event) => {
+        if (!event.target.matches(".manual-fill")) return;
+        renderFillExport();
+      });
+
+      output.addEventListener("click", (event) => {
+        if (event.target.id === "save-fills") {
+          localStorage.setItem(storageKey(lastSnapshot), JSON.stringify(readManualFills()));
+          renderFillExport("브라우저에 저장했습니다.");
+        }
+        if (event.target.id === "clear-fills") {
+          localStorage.removeItem(storageKey(lastSnapshot));
+          renderSnapshot(lastSnapshot);
+        }
+      });
+
+      function renderSnapshot(snapshot) {
+        const display = snapshot.display;
+        const fills = loadManualFills(snapshot);
+        output.innerHTML = `
+          <div class="cards">
+            ${summaryCard("종목", `${snapshot.security.name || ""} ${snapshot.security.ticker}`.trim())}
+            ${summaryCard("시장", display.market.market || display.market.kind)}
+            ${summaryCard("현재가", formatWithUnit(snapshot.quote?.price, snapshot.quote?.currency))}
+            ${summaryCard("자료원", sourceLabel(snapshot))}
+          </div>
+          <h2>단위 안내</h2>
+          <div class="unit-grid">
+            ${unitCard("매출/영업이익/순이익", display.units.amount.display, `${display.units.amount.raw} 원자료 ÷ ${display.units.amount.divisor.toLocaleString()}`)}
+            ${unitCard("EPS/BPS", display.units.per_share.display, "주당 지표")}
+            ${unitCard("PER/PBR", display.units.multiple.display, "배수")}
+            ${unitCard("ROE", display.units.percent.display, "순이익 ÷ 자본총계")}
+          </div>
+          <h2>연간 재무정보</h2>
+          ${annualTable(display, fills)}
+          <h2>PER/PBR/EPS/BPS</h2>
+          <div class="valuation-grid">${valuationCards(display.valuation_items, fills)}</div>
+          <div class="actions">
+            <button type="button" id="save-fills">빈 칸 저장</button>
+            <button type="button" class="secondary" id="clear-fills">저장값 지우기</button>
+          </div>
+          <pre id="fill-export"></pre>
+          <details>
+            <summary>Raw API response</summary>
+            <pre>${escapeHtml(JSON.stringify(snapshot, null, 2))}</pre>
+          </details>
+          <ul class="notes">${display.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
+        `;
+        for (const input of output.querySelectorAll(".manual-fill")) {
+          input.value = fills[input.dataset.fillKey] ?? "";
+        }
+        renderFillExport();
+      }
+
+      function annualTable(display, fills) {
+        const amountUnit = escapeHtml(display.units.amount.display);
+        const percentUnit = escapeHtml(display.units.percent.display);
+        const rows = display.annual_rows.map((row) => `
+          <tr>
+            <td>${row.year}</td>
+            ${valueCell(row.values.revenue, fillKey(row.values.revenue.fill), fills)}
+            ${valueCell(row.values.operating_income, fillKey(row.values.operating_income.fill), fills)}
+            ${valueCell(row.values.net_income, fillKey(row.values.net_income.fill), fills)}
+            ${valueCell(row.values.roe, fillKey(row.values.roe.fill), fills)}
+            <td class="source">${escapeHtml(row.source || "-")}${row.is_fallback ? " fallback" : ""}</td>
+          </tr>
+        `).join("");
+        return `
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>연도</th>
+                  <th>매출<span>${amountUnit}</span></th>
+                  <th>영업이익<span>${amountUnit}</span></th>
+                  <th>순이익<span>${amountUnit}</span></th>
+                  <th>ROE<span>${percentUnit}</span></th>
+                  <th>자료원</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      function valuationCards(items, fills) {
+        return items.map((item) => {
+          const key = fillKey(item.value.fill);
+          return `
+            <div class="card">
+              <span class="label">${escapeHtml(item.label)} <span class="unit">${escapeHtml(item.value.unit)}</span></span>
+              ${valueCell(item.value, key, fills, true)}
+              <div class="source">${escapeHtml(item.source || "-")}${item.is_fallback ? " fallback" : ""}</div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      function valueCell(cell, key, fills, block = false) {
+        if (!cell.is_missing) {
+          return block
+            ? `<div class="value">${escapeHtml(cell.formatted)}<span class="unit">${escapeHtml(cell.unit)}</span></div>`
+            : `<td>${escapeHtml(cell.formatted)}<span class="unit">${escapeHtml(cell.unit)}</span></td>`;
+        }
+        const manual = key && fills[key] ? fills[key] : "";
+        const control = `
+          <div class="fill-cell">
+            <input class="manual-fill" data-fill-key="${escapeHtml(key)}" placeholder="${escapeHtml(cell.unit)} 입력" value="${escapeHtml(manual)}" />
+            <span class="unit">${escapeHtml(cell.unit)}</span>
+          </div>
+        `;
+        return block ? control : `<td class="missing">${control}</td>`;
+      }
+
+      function renderFillExport(message = "") {
+        const element = document.getElementById("fill-export");
+        if (!element || !lastSnapshot) return;
+        const fills = readManualFills();
+        const payload = {
+          ticker: lastSnapshot.security.ticker,
+          market: lastSnapshot.security.market,
+          input_scale: "display",
+          manual_fills: fills,
+        };
+        const prefix = message ? `${message}\n\n` : "";
+        element.textContent = `${prefix}입력한 빈 칸(JSON):\n${JSON.stringify(payload, null, 2)}`;
+      }
+
+      function readManualFills() {
+        const fills = {};
+        for (const input of output.querySelectorAll(".manual-fill")) {
+          const value = input.value.trim();
+          if (value) fills[input.dataset.fillKey] = value;
+        }
+        return fills;
+      }
+
+      function loadManualFills(snapshot) {
+        try {
+          return JSON.parse(localStorage.getItem(storageKey(snapshot)) || "{}");
+        } catch {
+          return {};
+        }
+      }
+
+      function storageKey(snapshot) {
+        if (!snapshot) return "peaberry:fills";
+        const years = snapshot.display.annual_rows.map((row) => row.year).join(",");
+        return `peaberry:fills:${snapshot.security.ticker}:${snapshot.security.market || ""}:${years}`;
+      }
+
+      function fillKey(fill) {
+        if (!fill) return "";
+        return [fill.scope, fill.year || "current", fill.field].join(".");
+      }
+
+      function summaryCard(label, value) {
+        return `<div class="card"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(value || "-")}</span></div>`;
+      }
+
+      function unitCard(label, unit, note) {
+        return `<div class="unit-card"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(unit)}</span><p>${escapeHtml(note)}</p></div>`;
+      }
+
+      function sourceLabel(snapshot) {
+        const sources = new Set();
+        if (snapshot.quote?.source) sources.add(snapshot.quote.source);
+        if (snapshot.valuation?.source) sources.add(snapshot.valuation.source);
+        for (const row of snapshot.annual_financials || []) sources.add(row.source);
+        return [...sources].join(" + ") || "-";
+      }
+
+      function formatWithUnit(value, unit) {
+        if (value === null || value === undefined) return "-";
+        return `${Number(value).toLocaleString()} ${unit || ""}`.trim();
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+    </script>
+  </body>
+</html>
