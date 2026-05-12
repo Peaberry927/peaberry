@@ -133,6 +133,40 @@ class FundamentalsAdapterTests(TestCase):
         self.assertEqual(statement.diluted_shares, Decimal("15343783000"))
         self.assertEqual(statement.currency, Currency("USD"))
 
+    def test_sec_source_caches_company_facts_for_same_symbol_and_period(self) -> None:
+        symbol = Symbol("AAPL")
+        http = FakeJsonHttpClient(
+            {
+                "CIK0000320193.json": {
+                    "facts": {
+                        "us-gaap": {
+                            "NetIncomeLoss": {
+                                "units": {
+                                    "USD": [
+                                        {
+                                            "fy": 2024,
+                                            "fp": "FY",
+                                            "form": "10-K",
+                                            "val": 100,
+                                            "end": "2024-12-31",
+                                            "filed": "2025-02-01",
+                                            "accn": "a",
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+        source = SecCompanyFactsSource(symbol_to_cik={symbol: "320193"}, http_client=http)
+
+        tuple(source.statements(symbol, ["2024.12"]))
+        tuple(source.statements(symbol, ["2024.12"]))
+
+        self.assertEqual(len(http.requested_urls), 1)
+
     def test_open_dart_source_parses_korean_statement_fields(self) -> None:
         symbol = Symbol("000660")
         source = OpenDartFundamentalsSource(
@@ -190,6 +224,34 @@ class FundamentalsAdapterTests(TestCase):
         self.assertEqual(reference.price, Decimal("250.00"))
         self.assertEqual(reference.currency, Currency("USD"))
         self.assertEqual(reference.fiscal_period, "2024.12")
+
+    def test_yahoo_source_caches_same_symbol_and_period(self) -> None:
+        symbol = Symbol("AAPL")
+        target = int(datetime(2024, 12, 31, tzinfo=timezone.utc).timestamp())
+        http = FakeJsonHttpClient(
+            {
+                "finance/chart/AAPL": {
+                    "chart": {
+                        "result": [
+                            {
+                                "meta": {"currency": "USD"},
+                                "timestamp": [target],
+                                "indicators": {"quote": [{"close": [250]}]},
+                            }
+                        ]
+                    }
+                }
+            }
+        )
+        source = YahooChartMarketDataSource(
+            symbol_to_ticker={symbol: "AAPL"},
+            http_client=http,
+        )
+
+        source.market_reference(symbol, "2024.12")
+        source.market_reference(symbol, "2024.12")
+
+        self.assertEqual(len(http.requested_urls), 1)
 
     def test_yahoo_chart_source_uses_latest_price_for_future_estimate_period(self) -> None:
         symbol = Symbol("AAPL")

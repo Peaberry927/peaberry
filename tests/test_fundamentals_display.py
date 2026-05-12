@@ -72,12 +72,13 @@ class FundamentalsDisplayTests(TestCase):
         ]
 
         banned = (
-            "".join(("보강", "됨")),
-            "".join(("종", "합")),
-            "".join(("보", "완")),
-            "".join(("통합", " 분석")),
-            "".join(("상세", " 보강")),
-            "".join(("종", "합", " 요약")),
+            "\ubcf4\uac15",
+            "\ubcf4\uac15\ub428",
+            "\uc885\ud569",
+            "\ubcf4\uc644",
+            "\ud1b5\ud569 \ubd84\uc11d",
+            "\uc0c1\uc138 \ubcf4\uac15",
+            "\uc885\ud569 \uc694\uc57d",
         )
         for description in descriptions:
             for term in banned:

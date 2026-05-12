@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Sequence
 from urllib.parse import urlencode
@@ -15,6 +15,7 @@ from peaberry.domain.fundamentals import (
     SourceKind,
 )
 from peaberry.domain.market import Symbol
+from peaberry.fundamentals.cache import TtlCache
 from peaberry.fundamentals.http import JsonHttpClient, UrlLibJsonHttpClient
 from peaberry.fundamentals.periods import fiscal_year
 
@@ -55,6 +56,7 @@ class OpenDartFundamentalsSource:
         symbol_to_corp_code: dict[Symbol, str],
         http_client: JsonHttpClient | None = None,
         fs_div: str = "CFS",
+        cache_ttl: timedelta = timedelta(days=1),
     ) -> None:
         if not api_key:
             raise ValueError("OpenDART api_key is required")
@@ -62,7 +64,7 @@ class OpenDartFundamentalsSource:
         self.symbol_to_corp_code = dict(symbol_to_corp_code)
         self.http_client = http_client or UrlLibJsonHttpClient()
         self.fs_div = fs_div
-        self._cache: dict[tuple[str, int], dict[str, Any]] = {}
+        self._cache: TtlCache[dict[str, Any]] = TtlCache(cache_ttl)
 
     def statements(
         self,
@@ -119,7 +121,8 @@ class OpenDartFundamentalsSource:
 
     def _statement_payload(self, corp_code: str, year: int) -> dict[str, Any]:
         cache_key = (corp_code, year)
-        if cache_key not in self._cache:
+        cached = self._cache.get(cache_key)
+        if cached is None:
             query = urlencode(
                 {
                     "crtfc_key": self.api_key,
@@ -133,8 +136,8 @@ class OpenDartFundamentalsSource:
             payload = self.http_client.get_json(url)
             if payload.get("status") not in (None, "000"):
                 raise ValueError(f"OpenDART request failed: {payload.get('message')}")
-            self._cache[cache_key] = payload
-        return self._cache[cache_key]
+            cached = self._cache.set(cache_key, payload)
+        return cached
 
     def _extract_field(
         self,

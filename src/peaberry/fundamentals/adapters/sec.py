@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Iterable, Sequence
 
@@ -14,6 +14,7 @@ from peaberry.domain.fundamentals import (
     SourceKind,
 )
 from peaberry.domain.market import Symbol
+from peaberry.fundamentals.cache import TtlCache
 from peaberry.fundamentals.http import JsonHttpClient, UrlLibJsonHttpClient
 from peaberry.fundamentals.periods import fiscal_year
 
@@ -56,11 +57,12 @@ class SecCompanyFactsSource:
         symbol_to_cik: dict[Symbol, str],
         http_client: JsonHttpClient | None = None,
         user_agent: str = "peaberry/0.1 contact@example.com",
+        cache_ttl: timedelta = timedelta(days=1),
     ) -> None:
         self.symbol_to_cik = dict(symbol_to_cik)
         self.http_client = http_client or UrlLibJsonHttpClient()
         self.user_agent = user_agent
-        self._cache: dict[str, dict[str, Any]] = {}
+        self._cache: TtlCache[dict[str, Any]] = TtlCache(cache_ttl)
 
     def statements(
         self,
@@ -111,16 +113,20 @@ class SecCompanyFactsSource:
 
     def _company_facts(self, cik: str) -> dict[str, Any]:
         normalized = str(cik).zfill(10)
-        if normalized not in self._cache:
+        cached = self._cache.get(normalized)
+        if cached is None:
             url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{normalized}.json"
-            self._cache[normalized] = self.http_client.get_json(
-                url,
-                headers={
-                    "User-Agent": self.user_agent,
-                    "Accept-Encoding": "gzip, deflate",
-                },
+            cached = self._cache.set(
+                normalized,
+                self.http_client.get_json(
+                    url,
+                    headers={
+                        "User-Agent": self.user_agent,
+                        "Accept-Encoding": "gzip, deflate",
+                    },
+                ),
             )
-        return self._cache[normalized]
+        return cached
 
     def _extract_field(
         self,

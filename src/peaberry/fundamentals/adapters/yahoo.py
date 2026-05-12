@@ -14,6 +14,7 @@ from peaberry.domain.fundamentals import (
     SourceKind,
 )
 from peaberry.domain.market import Symbol
+from peaberry.fundamentals.cache import TtlCache
 from peaberry.fundamentals.http import JsonHttpClient, UrlLibJsonHttpClient
 from peaberry.fundamentals.periods import fiscal_period_end
 
@@ -28,11 +29,12 @@ class YahooChartMarketDataSource:
         symbol_to_ticker: dict[Symbol, str],
         symbol_to_currency: dict[Symbol, Currency] | None = None,
         http_client: JsonHttpClient | None = None,
+        cache_ttl: timedelta = timedelta(minutes=15),
     ) -> None:
         self.symbol_to_ticker = dict(symbol_to_ticker)
         self.symbol_to_currency = dict(symbol_to_currency or {})
         self.http_client = http_client or UrlLibJsonHttpClient()
-        self._cache: dict[tuple[str, str | None], dict[str, Any]] = {}
+        self._cache: TtlCache[dict[str, Any]] = TtlCache(cache_ttl)
 
     def statements(
         self,
@@ -79,8 +81,9 @@ class YahooChartMarketDataSource:
 
     def _chart_payload(self, ticker: str, fiscal_period: str | None) -> dict[str, Any]:
         cache_key = (ticker, fiscal_period)
-        if cache_key in self._cache:
-            return self._cache[cache_key]
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         if fiscal_period is None:
             end = datetime.now(timezone.utc)
@@ -94,8 +97,7 @@ class YahooChartMarketDataSource:
             f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
             f"?period1={period1}&period2={period2}&interval=1d"
         )
-        self._cache[cache_key] = self.http_client.get_json(url)
-        return self._cache[cache_key]
+        return self._cache.set(cache_key, self.http_client.get_json(url))
 
     def _chart_result(self, payload: dict[str, Any]) -> dict[str, Any] | None:
         chart = payload.get("chart", {})

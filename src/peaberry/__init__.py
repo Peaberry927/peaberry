@@ -10,6 +10,7 @@ from peaberry.fundamentals.display import FundamentalDisplayMapper
 from peaberry.fundamentals.factory import build_fundamentals_source
 from peaberry.fundamentals.pipeline import FundamentalDataPipeline
 from peaberry.fundamentals.resolver import FundamentalDataResolver
+from peaberry.fundamentals.ui import FundamentalUiPresenter
 
 __all__ = [
     "BacktestEngine",
@@ -20,6 +21,7 @@ __all__ = [
     "FundamentalDataPipeline",
     "FundamentalDataResolver",
     "FundamentalDisplayMapper",
+    "FundamentalUiPresenter",
     "FundamentalRow",
     "Portfolio",
     "Symbol",

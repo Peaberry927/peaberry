@@ -75,6 +75,13 @@ The `fundamentals` package implements this as:
 - `FundamentalDisplayMapper`: maps rows to table units.  Korean statement
   amounts are displayed in `억원`, US statement amounts in `USD mn`, EPS/BPS in
   `원/주` or `USD/share`, PER/PBR in `배`, and ROE/dividend yield in `%`.
+- `FundamentalUiPresenter`: exposes display rows and `source_errors` for the
+  screen layer so provider failures do not stop table rendering.
+
+Adapter requests are cached in process: SEC and OpenDART statement payloads use
+a one-day TTL, while Yahoo/KRX/Naver market prices use a 15-minute TTL.  Live
+smoke tests are disabled by default; set `PEABERRY_LIVE_SMOKE=1` and, for
+Korean issuers, `DART_API_KEY` to run them.
 
 Valuation cells are resolved per fiscal period.  If a row has EPS/BPS but PER or
 PBR remains empty, the planner requests a period-specific market reference.  If
@@ -116,6 +123,10 @@ print(result.rows)
 print(result.acquisition_requests)
 print(result.source_errors)
 ```
+
+On Windows, `scripts\verify.bat` automatically tries `py -3`, `python`, then
+`python3` and runs the unit tests plus compile checks with the first available
+launcher.
 
 ## Quick start
 

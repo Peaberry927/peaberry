@@ -17,6 +17,7 @@ from peaberry.fundamentals.sources import (
     FundamentalsSource,
     InMemoryFundamentalsSource,
 )
+from peaberry.fundamentals.ui import FundamentalScreenModel, FundamentalUiPresenter
 
 __all__ = [
     "CompositeFundamentalsSource",
@@ -28,6 +29,8 @@ __all__ = [
     "FundamentalDisplayMapper",
     "FundamentalDisplayRow",
     "FundamentalPipelineResult",
+    "FundamentalScreenModel",
+    "FundamentalUiPresenter",
     "FundamentalsSource",
     "InMemoryFundamentalsSource",
     "build_fundamentals_source",

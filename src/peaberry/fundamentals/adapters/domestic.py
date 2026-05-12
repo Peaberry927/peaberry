@@ -14,6 +14,7 @@ from peaberry.domain.fundamentals import (
     SourceKind,
 )
 from peaberry.domain.market import Symbol
+from peaberry.fundamentals.cache import TtlCache
 from peaberry.fundamentals.http import JsonHttpClient, UrlLibJsonHttpClient
 from peaberry.fundamentals.periods import fiscal_period_end
 from peaberry.fundamentals.sources import FundamentalsSource
@@ -65,10 +66,11 @@ class NaverChartMarketDataSource:
         self,
         symbol_to_code: dict[Symbol, str],
         http_client: JsonHttpClient | None = None,
+        cache_ttl: timedelta = timedelta(minutes=15),
     ) -> None:
         self.symbol_to_code = dict(symbol_to_code)
         self.http_client = http_client or UrlLibJsonHttpClient()
-        self._cache: dict[tuple[str, str | None], dict[str, Any]] = {}
+        self._cache: TtlCache[dict[str, Any]] = TtlCache(cache_ttl)
 
     def statements(
         self,
@@ -106,16 +108,16 @@ class NaverChartMarketDataSource:
 
     def _payload(self, code: str, fiscal_period: str | None) -> dict[str, Any]:
         cache_key = (code, fiscal_period)
-        if cache_key in self._cache:
-            return self._cache[cache_key]
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
         target = self._target_datetime(fiscal_period)
         start = target - timedelta(days=10)
         url = (
             f"https://api.stock.naver.com/chart/domestic/item/{code}/day"
             f"?startDateTime={start:%Y%m%d}0000&endDateTime={target:%Y%m%d}2359"
         )
-        self._cache[cache_key] = self.http_client.get_json(url)
-        return self._cache[cache_key]
+        return self._cache.set(cache_key, self.http_client.get_json(url))
 
     def _select_close(
         self,
@@ -175,11 +177,12 @@ class KrxDailyMarketDataSource:
         symbol_to_code: dict[Symbol, str],
         http_client: JsonHttpClient | None = None,
         endpoint: str = "https://data-api.krx.co.kr/svc/apis/sto/stk_bydd_trd",
+        cache_ttl: timedelta = timedelta(minutes=15),
     ) -> None:
         self.symbol_to_code = dict(symbol_to_code)
         self.http_client = http_client or UrlLibJsonHttpClient()
         self.endpoint = endpoint
-        self._cache: dict[tuple[str, str | None], dict[str, Any]] = {}
+        self._cache: TtlCache[dict[str, Any]] = TtlCache(cache_ttl)
 
     def statements(
         self,
@@ -218,12 +221,12 @@ class KrxDailyMarketDataSource:
 
     def _payload(self, code: str, fiscal_period: str | None) -> dict[str, Any]:
         cache_key = (code, fiscal_period)
-        if cache_key in self._cache:
-            return self._cache[cache_key]
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
         target = self._target_datetime(fiscal_period)
         url = f"{self.endpoint}?basDd={target:%Y%m%d}&likeSrtnCd={code}"
-        self._cache[cache_key] = self.http_client.get_json(url)
-        return self._cache[cache_key]
+        return self._cache.set(cache_key, self.http_client.get_json(url))
 
     def _select_reference(
         self,
