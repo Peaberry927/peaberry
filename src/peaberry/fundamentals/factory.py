@@ -5,6 +5,9 @@ from __future__ import annotations
 from peaberry.domain.fundamentals import Currency
 from peaberry.domain.market import Symbol
 from peaberry.fundamentals.adapters import (
+    FallbackMarketDataSource,
+    KrxDailyMarketDataSource,
+    NaverChartMarketDataSource,
     OpenDartFundamentalsSource,
     SecCompanyFactsSource,
     YahooChartMarketDataSource,
@@ -19,6 +22,7 @@ def build_fundamentals_source(
     dart_corp_codes: dict[Symbol, str] | None = None,
     market_tickers: dict[Symbol, str] | None = None,
     market_currencies: dict[Symbol, Currency] | None = None,
+    domestic_market_codes: dict[Symbol, str] | None = None,
     dart_api_key: str | None = None,
     http_client: JsonHttpClient | None = None,
     sec_user_agent: str = "peaberry/0.1 contact@example.com",
@@ -46,12 +50,32 @@ def build_fundamentals_source(
                 http_client=http_client,
             )
         )
-    if market_tickers:
-        sources.append(
-            YahooChartMarketDataSource(
-                symbol_to_ticker=market_tickers,
-                symbol_to_currency=market_currencies,
-                http_client=http_client,
-            )
+    yahoo_source = (
+        YahooChartMarketDataSource(
+            symbol_to_ticker=market_tickers,
+            symbol_to_currency=market_currencies,
+            http_client=http_client,
         )
+        if market_tickers
+        else None
+    )
+    if domestic_market_codes:
+        fallback_sources: list[FundamentalsSource] = []
+        if yahoo_source is not None:
+            fallback_sources.append(yahoo_source)
+        fallback_sources.extend(
+            [
+                KrxDailyMarketDataSource(
+                    symbol_to_code=domestic_market_codes,
+                    http_client=http_client,
+                ),
+                NaverChartMarketDataSource(
+                    symbol_to_code=domestic_market_codes,
+                    http_client=http_client,
+                ),
+            ]
+        )
+        sources.append(FallbackMarketDataSource("domestic_market_fallback", fallback_sources))
+    elif yahoo_source is not None:
+        sources.append(yahoo_source)
     return CompositeFundamentalsSource(sources)

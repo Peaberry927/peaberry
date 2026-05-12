@@ -57,6 +57,10 @@ The `fundamentals` package implements this as:
   when a DART API key and corp code mapping are configured.
 - `YahooChartMarketDataSource`: period-end or latest market price adapter used
   to fill PER/PBR/dividend-yield inputs.
+- `KrxDailyMarketDataSource` and `NaverChartMarketDataSource`: Korean market
+  price adapters that can be chained after Yahoo for domestic stocks.
+- `FallbackMarketDataSource`: tries market providers in order and records
+  provider errors without stopping the pipeline.
 - `CompositeFundamentalsSource`: priority merge that preserves high-quality
   values and fills blanks from lower-priority sources.
 - `FundamentalDataResolver`: produces display-ready `FundamentalRow` objects
@@ -68,6 +72,9 @@ The `fundamentals` package implements this as:
   capture, and remaining-gap planning in one call.  A failing provider is
   recorded in `source_errors` without discarding data already acquired from
   other providers.
+- `FundamentalDisplayMapper`: maps rows to table units.  Korean statement
+  amounts are displayed in `억원`, US statement amounts in `USD mn`, EPS/BPS in
+  `원/주` or `USD/share`, PER/PBR in `배`, and ROE/dividend yield in `%`.
 
 Valuation cells are resolved per fiscal period.  If a row has EPS/BPS but PER or
 PBR remains empty, the planner requests a period-specific market reference.  If
@@ -96,6 +103,7 @@ source = build_fundamentals_source(
     dart_corp_codes={hynix: "00164779"},
     dart_api_key=os.environ.get("DART_API_KEY"),
     market_tickers={aapl: "AAPL", hynix: "000660.KS"},
+    domestic_market_codes={hynix: "000660"},
     market_currencies={aapl: Currency("USD"), hynix: Currency("KRW")},
     sec_user_agent="peaberry/0.1 your-email@example.com",
 )

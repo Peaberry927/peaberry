@@ -7,6 +7,9 @@ from peaberry.domain.fundamentals import Currency, SourceKind
 from peaberry.domain.market import Symbol
 from peaberry.fundamentals import FundamentalDataPipeline, build_fundamentals_source
 from peaberry.fundamentals.adapters import (
+    FallbackMarketDataSource,
+    KrxDailyMarketDataSource,
+    NaverChartMarketDataSource,
     OpenDartFundamentalsSource,
     SecCompanyFactsSource,
     YahooChartMarketDataSource,
@@ -215,6 +218,65 @@ class FundamentalsAdapterTests(TestCase):
         self.assertEqual(reference.price, Decimal("180.0"))
         self.assertEqual(reference.fiscal_period, "2027.12(E)")
 
+    def test_domestic_fallback_keeps_going_when_primary_market_source_fails(self) -> None:
+        class BrokenMarketSource:
+            name = "Yahoo Finance Chart"
+
+            def statements(self, symbol, fiscal_periods):
+                return ()
+
+            def market_reference(self, symbol, fiscal_period=None):
+                raise RuntimeError("too many requests")
+
+        symbol = Symbol("000660")
+        naver = NaverChartMarketDataSource(
+            symbol_to_code={symbol: "000660"},
+            http_client=FakeJsonHttpClient(
+                {
+                    "api.stock.naver.com": {
+                        "data": [
+                            {"localDate": "20241230", "closePrice": "171,000"},
+                            {"localDate": "20241231", "closePrice": "173,000"},
+                        ]
+                    }
+                }
+            ),
+        )
+        fallback = FallbackMarketDataSource(
+            "domestic_market_fallback",
+            [BrokenMarketSource(), naver],
+        )
+
+        reference = fallback.market_reference(symbol, "2024.12")
+
+        self.assertEqual(reference.price, Decimal("173000"))
+        self.assertEqual(fallback.source_errors[0][0], "Yahoo Finance Chart")
+
+    def test_krx_source_parses_close_and_market_cap(self) -> None:
+        symbol = Symbol("000660")
+        source = KrxDailyMarketDataSource(
+            symbol_to_code={symbol: "000660"},
+            http_client=FakeJsonHttpClient(
+                {
+                    "stk_bydd_trd": {
+                        "OutBlock_1": [
+                            {
+                                "BAS_DD": "20241230",
+                                "CLSPRC": "171,000",
+                                "MKTCAP": "124,488,404,415,000",
+                            }
+                        ]
+                    }
+                }
+            ),
+        )
+
+        reference = source.market_reference(symbol, "2024.12")
+
+        self.assertEqual(reference.currency, Currency("KRW"))
+        self.assertEqual(reference.price, Decimal("171000"))
+        self.assertEqual(reference.market_cap, Decimal("124488404415000"))
+
     def test_factory_pipeline_acquires_and_resolves_sec_plus_market_data(self) -> None:
         symbol = Symbol("AAPL")
         close_at = int(datetime(2024, 12, 31, tzinfo=timezone.utc).timestamp())
@@ -280,3 +342,29 @@ class FundamentalsAdapterTests(TestCase):
         self.assertEqual(result.rows[0].eps.amount, Decimal("10"))
         self.assertEqual(result.rows[0].per.amount, Decimal("20"))
         self.assertEqual(result.rows[0].sources[0].kind, SourceKind.REGULATORY_FILING)
+
+    def test_factory_domestic_market_fallback_reports_failed_provider(self) -> None:
+        symbol = Symbol("000660")
+        source = build_fundamentals_source(
+            market_tickers={symbol: "000660.KS"},
+            market_currencies={symbol: Currency("KRW")},
+            domestic_market_codes={symbol: "000660"},
+            http_client=FakeJsonHttpClient(
+                {
+                    "stk_bydd_trd": {
+                        "OutBlock_1": [
+                            {
+                                "BAS_DD": "20241230",
+                                "CLSPRC": "171,000",
+                                "MKTCAP": "124,488,404,415,000",
+                            }
+                        ]
+                    }
+                }
+            ),
+        )
+
+        reference = source.market_reference(symbol, "2024.12")
+
+        self.assertEqual(reference.price, Decimal("171000"))
+        self.assertEqual(source.source_errors[0][0], "Yahoo Finance Chart")

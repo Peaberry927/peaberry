@@ -87,7 +87,10 @@ class CompositeFundamentalsSource:
 
     @property
     def source_errors(self) -> tuple[tuple[str, str], ...]:
-        return tuple(self._source_errors)
+        errors = list(self._source_errors)
+        for source in self.sources:
+            errors.extend(getattr(source, "source_errors", ()))
+        return tuple(errors)
 
     def statements(
         self,
