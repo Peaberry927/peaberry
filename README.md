@@ -10,6 +10,7 @@ execution, and portfolio accounting so each layer can evolve independently.
 src/peaberry/
   domain/       Immutable market data, signals, trades, and portfolio state
   data/         Market data source adapters
+  fundamentals/ Fundamental data source composition and gap resolution
   strategies/   Alpha models that emit target allocations
   risk/         Pre-trade portfolio and exposure controls
   execution/    Backtest/live execution model boundary
@@ -27,6 +28,34 @@ Key design choices:
   to avoid hidden float drift in core financial state.
 - The backtesting engine coordinates modules through application ports instead
   of coupling directly to concrete strategy or data implementations.
+- Fundamental rows keep source provenance and expose explicit `missing_fields`
+  so UI tables can distinguish unavailable data from derived estimates.
+
+## Fundamental gap-filling plan
+
+For company financial tables, missing cells should be filled from prioritized
+sources before the UI renders:
+
+1. **Regulatory filings**: DART for Korean issuers and SEC Company Facts for
+   US issuers provide audited revenue, operating income, net income, equity,
+   diluted shares, and dividends when available.
+2. **Company IR**: earnings releases and annual reports fill filing taxonomy
+   gaps, especially segment totals or locally reported line items.
+3. **Market data**: latest price or market cap is required to compute PER/PBR
+   and dividend yield.
+4. **Analyst or internal estimates**: future periods such as `2027.12(E)` are
+   accepted as estimates and marked with reduced confidence.
+5. **Derived metrics**: EPS, BPS, ROE, PER, PBR, and dividend yield are computed
+   from sourced facts instead of being stored as independent truths.
+
+The `fundamentals` package implements this as:
+
+- `FundamentalsSource`: adapter contract for DART, SEC, IR imports, market data,
+  or estimate feeds.
+- `CompositeFundamentalsSource`: priority merge that preserves high-quality
+  values and fills blanks from lower-priority sources.
+- `FundamentalDataResolver`: produces display-ready `FundamentalRow` objects
+  with values, source provenance, estimate flags, and remaining gaps.
 
 ## Quick start
 
