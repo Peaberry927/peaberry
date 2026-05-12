@@ -29,13 +29,12 @@ class FundamentalDataResolver:
             statement.fiscal_period: statement
             for statement in self.source.statements(symbol, fiscal_periods)
         }
-        market = self.source.market_reference(symbol)
         return tuple(
             self._row_from_statement(
                 statement=statements.get(period),
                 symbol=symbol,
                 fiscal_period=period,
-                market=market,
+                market=self.source.market_reference(symbol, period),
             )
             for period in fiscal_periods
         )

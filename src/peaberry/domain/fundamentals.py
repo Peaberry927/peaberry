@@ -147,12 +147,15 @@ class MarketReference:
     currency: Currency
     as_of: datetime
     source: DataSourceRef
+    fiscal_period: str | None = None
     price: Decimal | None = None
     market_cap: Decimal | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "price", _to_decimal(self.price))
         object.__setattr__(self, "market_cap", _to_decimal(self.market_cap))
+        if self.fiscal_period == "":
+            raise ValueError("fiscal_period cannot be empty")
         if self.price is not None and self.price <= 0:
             raise ValueError("price must be positive")
         if self.market_cap is not None and self.market_cap <= 0:

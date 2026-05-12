@@ -56,6 +56,15 @@ The `fundamentals` package implements this as:
   values and fills blanks from lower-priority sources.
 - `FundamentalDataResolver`: produces display-ready `FundamentalRow` objects
   with values, source provenance, estimate flags, and remaining gaps.
+- `FundamentalCoveragePlanner`: converts unresolved cells into acquisition
+  requests such as "fetch DART/SEC net income and diluted shares" or "fetch
+  KRX/Nasdaq period-end price or market cap".
+
+Valuation cells are resolved per fiscal period.  If a row has EPS/BPS but PER or
+PBR remains empty, the planner requests a period-specific market reference.  If
+the quote is unavailable, `MarketReference.market_cap` plus diluted shares can be
+used to derive a comparable valuation price.  Market references are currency
+checked before valuation metrics are calculated.
 
 ## Quick start
 

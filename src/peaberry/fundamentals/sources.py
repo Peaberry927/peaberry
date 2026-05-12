@@ -24,8 +24,12 @@ class FundamentalsSource(Protocol):
     ) -> Iterable[FinancialStatement]:
         """Return available statement facts for requested fiscal periods."""
 
-    def market_reference(self, symbol: Symbol) -> MarketReference | None:
-        """Return the latest price or market-cap reference for valuation metrics."""
+    def market_reference(
+        self,
+        symbol: Symbol,
+        fiscal_period: str | None = None,
+    ) -> MarketReference | None:
+        """Return a period-specific or latest market reference for valuation metrics."""
 
 
 class InMemoryFundamentalsSource:
@@ -39,9 +43,9 @@ class InMemoryFundamentalsSource:
     ) -> None:
         self.name = name
         self._statements = tuple(statements)
-        self._market_references = {
-            reference.symbol: reference for reference in market_references
-        }
+        self._market_references = tuple(
+            sorted(market_references, key=lambda reference: reference.as_of, reverse=True)
+        )
 
     def statements(
         self,
@@ -55,8 +59,20 @@ class InMemoryFundamentalsSource:
             if statement.symbol == symbol and statement.fiscal_period in requested
         )
 
-    def market_reference(self, symbol: Symbol) -> MarketReference | None:
-        return self._market_references.get(symbol)
+    def market_reference(
+        self,
+        symbol: Symbol,
+        fiscal_period: str | None = None,
+    ) -> MarketReference | None:
+        if fiscal_period is not None:
+            for reference in self._market_references:
+                if reference.symbol == symbol and reference.fiscal_period == fiscal_period:
+                    return reference
+
+        for reference in self._market_references:
+            if reference.symbol == symbol and reference.fiscal_period is None:
+                return reference
+        return None
 
 
 class CompositeFundamentalsSource:
@@ -84,9 +100,19 @@ class CompositeFundamentalsSource:
                 )
         return tuple(merged[period] for period in fiscal_periods if period in merged)
 
-    def market_reference(self, symbol: Symbol) -> MarketReference | None:
+    def market_reference(
+        self,
+        symbol: Symbol,
+        fiscal_period: str | None = None,
+    ) -> MarketReference | None:
+        if fiscal_period is not None:
+            for source in self.sources:
+                reference = source.market_reference(symbol, fiscal_period)
+                if reference is not None and reference.fiscal_period == fiscal_period:
+                    return reference
+
         for source in self.sources:
-            reference = source.market_reference(symbol)
+            reference = source.market_reference(symbol, fiscal_period)
             if reference is not None:
                 return reference
         return None
