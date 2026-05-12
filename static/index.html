@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Peaberry Quant Data</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 2rem;
+        max-width: 920px;
+      }
+      input,
+      button {
+        font: inherit;
+        padding: 0.55rem;
+      }
+      pre {
+        background: #111827;
+        color: #e5e7eb;
+        overflow: auto;
+        padding: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Peaberry Quant Data</h1>
+    <p>
+      Korean stocks use Naver prices/valuation and OpenDART annual financials.
+      Yahoo is used only as a US-stock fallback.
+    </p>
+    <form id="snapshot-form">
+      <input id="ticker" placeholder="Ticker, e.g. 000660 or AAPL" required />
+      <input id="market" placeholder="Market, e.g. KOSPI or US" />
+      <input id="corp-code" placeholder="OpenDART corp_code" />
+      <button type="submit">Load snapshot</button>
+    </form>
+    <pre id="output">Enter a ticker to request a valuation snapshot.</pre>
+    <script>
+      const form = document.getElementById("snapshot-form");
+      const output = document.getElementById("output");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const ticker = document.getElementById("ticker").value.trim();
+        const market = document.getElementById("market").value.trim();
+        const corpCode = document.getElementById("corp-code").value.trim();
+        const params = new URLSearchParams();
+        if (market) params.set("market", market);
+        if (corpCode) params.set("corp_code", corpCode);
+
+        output.textContent = "Loading...";
+        const response = await fetch(`/api/snapshot/${ticker}?${params.toString()}`);
+        const body = await response.json();
+        output.textContent = JSON.stringify(body, null, 2);
+      });
+    </script>
+  </body>
+</html>
