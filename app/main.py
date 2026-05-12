@@ -7,6 +7,7 @@ from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.display import build_display_snapshot
 from app.models import Security
 from app.pipeline import QuantDataPipeline
 from app.storage import SQLiteStore
@@ -35,8 +36,15 @@ def valuation_snapshot(
     years: str | None = Query(default=None, description="Comma-separated fiscal years"),
 ):
     security = Security(ticker=ticker, market=market, corp_code=corp_code, name=name)
-    fiscal_years = [int(item.strip()) for item in years.split(",")] if years else None
-    return pipeline.build_valuation_snapshot(security, fiscal_years).to_dict()
+    fiscal_years = (
+        [int(item.strip()) for item in years.split(",") if item.strip()]
+        if years
+        else pipeline.default_fiscal_years(5)
+    )
+    snapshot = pipeline.build_valuation_snapshot(security, fiscal_years)
+    body = snapshot.to_dict()
+    body["display"] = build_display_snapshot(snapshot, fiscal_years)
+    return body
 
 
 @app.get("/api/index/{index_code}")

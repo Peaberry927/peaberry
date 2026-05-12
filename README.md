@@ -29,6 +29,13 @@ uvicorn app.main:app --reload
 
 Then open `http://127.0.0.1:8000`.
 
+The snapshot response includes a `display` section for UI-safe presentation:
+
+- Korean annual financial amounts are shown in `억원` from OpenDART KRW raw values.
+- US annual financial amounts are shown in `USD mn` from Yahoo USD raw values.
+- EPS/BPS use per-share currency units, PER/PBR use `배`, and ROE uses `%`.
+- Missing display cells include fill metadata, and the web UI can save manual blank fills locally.
+
 ## Test
 
 ```bash
