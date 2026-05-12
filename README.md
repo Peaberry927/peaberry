@@ -32,5 +32,5 @@ Then open `http://127.0.0.1:8000`.
 ## Test
 
 ```bash
-python -m unittest
+python3 -m unittest discover -s tests -p 'test_*.py'
 ```
