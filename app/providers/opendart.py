@@ -13,6 +13,7 @@ from app.providers.base import HttpClient, ProviderError
 REPORT_CODE_ANNUAL = "11011"
 PREFERRED_FS_DIVS = ("CFS", "OFS")
 RETRYABLE_STATUS_CODES = {"013"}
+DART_COMPANY_SEARCH_URL = "https://dart.fss.or.kr/html/search/SearchCompany_M2.html"
 
 
 class OpenDartProvider:
@@ -113,10 +114,30 @@ class OpenDartProvider:
         if not re.fullmatch(r"\d{6}", stock_code):
             raise ProviderError(f"OpenDART corp_code missing for {security.ticker}")
 
+        if self._corp_codes_by_stock and stock_code in self._corp_codes_by_stock:
+            return self._corp_codes_by_stock[stock_code]
+
+        corp_code = self._fetch_corp_code_from_search(stock_code)
+        if corp_code:
+            if self._corp_codes_by_stock is None:
+                self._corp_codes_by_stock = {}
+            self._corp_codes_by_stock[stock_code] = corp_code
+            return corp_code
+
         corp_code = self._load_corp_codes_by_stock().get(stock_code)
         if not corp_code:
             raise ProviderError(f"OpenDART corp_code not found for {security.ticker}")
         return corp_code
+
+    def _fetch_corp_code_from_search(self, stock_code: str) -> str | None:
+        try:
+            html = self.http.get_text(DART_COMPANY_SEARCH_URL, {"textCrpNM": stock_code})
+        except ProviderError:
+            return None
+        match = re.search(r'id="textCrpCik"[^>]*value=["\'](\d{8})["\']', html, flags=re.IGNORECASE)
+        if not match:
+            return None
+        return match.group(1)
 
     def _load_corp_codes_by_stock(self) -> dict[str, str]:
         if self._corp_codes_by_stock is not None:

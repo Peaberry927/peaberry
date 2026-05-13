@@ -17,12 +17,22 @@ class StubHttpClient:
         self.calls.append(params or {})
         return self.responses[len(self.calls) - 1]
 
+    def get_text(self, url: str, params: dict[str, str] | None = None) -> str:
+        return ""
+
 
 class CorpCodeHttpClient:
-    def __init__(self, corp_xml_rows: list[tuple[str, str]], statements: list[dict]) -> None:
+    def __init__(
+        self,
+        corp_xml_rows: list[tuple[str, str]],
+        statements: list[dict],
+        search_html: str | None = None,
+    ) -> None:
         self.statements = statements
         self.json_calls: list[dict[str, str]] = []
         self.bytes_calls: list[dict[str, str]] = []
+        self.text_calls: list[dict[str, str]] = []
+        self.search_html = search_html or ""
         xml = "<result>" + "".join(
             f"<list><corp_code>{corp}</corp_code><stock_code>{stock}</stock_code></list>"
             for stock, corp in corp_xml_rows
@@ -39,6 +49,10 @@ class CorpCodeHttpClient:
     def get_json(self, url: str, params: dict[str, str] | None = None) -> dict:
         self.json_calls.append(params or {})
         return self.statements[len(self.json_calls) - 1]
+
+    def get_text(self, url: str, params: dict[str, str] | None = None) -> str:
+        self.text_calls.append(params or {})
+        return self.search_html
 
 
 class OpenDartProviderTests(unittest.TestCase):
@@ -111,6 +125,7 @@ class OpenDartProviderTests(unittest.TestCase):
     def test_resolves_missing_corp_code_from_ticker(self) -> None:
         http = CorpCodeHttpClient(
             corp_xml_rows=[("005930", "00126380")],
+            search_html='<input id="textCrpCik" name="textCrpCik" type="hidden" value="00126380"/>',
             statements=[
                 {
                     "status": "000",
@@ -127,12 +142,14 @@ class OpenDartProviderTests(unittest.TestCase):
         row = provider.fetch_annual_financials(Security(ticker="005930", market="KOSPI"), 2024)
 
         self.assertEqual(row.revenue, 1000)
-        self.assertEqual(len(http.bytes_calls), 1)
+        self.assertEqual(len(http.text_calls), 1)
+        self.assertEqual(len(http.bytes_calls), 0)
         self.assertEqual(http.json_calls[0]["corp_code"], "00126380")
 
     def test_caches_corp_code_download(self) -> None:
         http = CorpCodeHttpClient(
             corp_xml_rows=[("005930", "00126380")],
+            search_html='<input id="textCrpCik" name="textCrpCik" type="hidden" value="00126380"/>',
             statements=[
                 {"status": "000", "list": [{"account_nm": "매출액", "thstrm_amount": "1000"}]},
                 {"status": "000", "list": [{"account_nm": "매출액", "thstrm_amount": "1100"}]},
@@ -144,9 +161,26 @@ class OpenDartProviderTests(unittest.TestCase):
         provider.fetch_annual_financials(security, 2024)
         provider.fetch_annual_financials(security, 2023)
 
-        self.assertEqual(len(http.bytes_calls), 1)
+        self.assertEqual(len(http.text_calls), 1)
+        self.assertEqual(len(http.bytes_calls), 0)
         self.assertEqual(http.json_calls[0]["corp_code"], "00126380")
         self.assertEqual(http.json_calls[1]["corp_code"], "00126380")
+
+    def test_falls_back_to_corp_code_archive_when_search_missing(self) -> None:
+        http = CorpCodeHttpClient(
+            corp_xml_rows=[("005930", "00126380")],
+            search_html="",
+            statements=[
+                {"status": "000", "list": [{"account_nm": "매출액", "thstrm_amount": "1000"}]},
+            ],
+        )
+        provider = OpenDartProvider(api_key="test-key", http_client=http)
+
+        row = provider.fetch_annual_financials(Security(ticker="005930", market="KOSPI"), 2024)
+
+        self.assertEqual(row.revenue, 1000)
+        self.assertEqual(len(http.text_calls), 1)
+        self.assertEqual(len(http.bytes_calls), 1)
 
 
 if __name__ == "__main__":
