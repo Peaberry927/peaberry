@@ -40,6 +40,23 @@ class HttpClient:
         except json.JSONDecodeError as exc:
             raise ProviderError(f"Provider returned invalid JSON for {url}") from exc
 
+    def get_bytes(self, url: str, params: dict[str, str] | None = None) -> bytes:
+        target = f"{url}?{urlencode(params)}" if params else url
+        request = Request(
+            target,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64) "
+                    "AppleWebKit/537.36 Chrome/124 Safari/537.36"
+                )
+            },
+        )
+        try:
+            with urlopen(request, timeout=self.timeout_seconds) as response:
+                return response.read()
+        except (HTTPError, URLError, TimeoutError) as exc:
+            raise ProviderError(f"GET failed for {target}: {exc}") from exc
+
 
 def strip_html(value: str) -> str:
     output = []

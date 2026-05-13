@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import io
 import os
 import re
+import xml.etree.ElementTree as ET
+import zipfile
 
 from app.models import AnnualFinancials, Security, parse_number, utc_now_iso
 from app.providers.base import HttpClient, ProviderError
@@ -42,15 +45,15 @@ class OpenDartProvider:
     ) -> None:
         self.api_key = api_key or os.getenv("OPENDART_API_KEY")
         self.http = http_client or HttpClient()
+        self._corp_codes_by_stock: dict[str, str] | None = None
 
     def fetch_annual_financials(self, security: Security, year: int) -> AnnualFinancials:
         if not self.api_key:
             raise ProviderError("OPENDART_API_KEY is required for OpenDART annuals")
-        if not security.corp_code:
-            raise ProviderError(f"OpenDART corp_code missing for {security.ticker}")
+        corp_code = self._resolve_corp_code(security)
 
         for index, fs_div in enumerate(PREFERRED_FS_DIVS):
-            payload = self._fetch_statement_payload(security, year, fs_div)
+            payload = self._fetch_statement_payload(corp_code, year, fs_div)
             status = str(payload.get("status", ""))
             rows = payload.get("list") or []
 
@@ -90,17 +93,62 @@ class OpenDartProvider:
 
         raise ProviderError(f"OpenDART annual statement empty for {security.ticker} {year}")
 
-    def _fetch_statement_payload(self, security: Security, year: int, fs_div: str) -> dict:
+    def _fetch_statement_payload(self, corp_code: str, year: int, fs_div: str) -> dict:
         return self.http.get_json(
             "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json",
             {
                 "crtfc_key": self.api_key,
-                "corp_code": security.corp_code,
+                "corp_code": corp_code,
                 "bsns_year": str(year),
                 "reprt_code": REPORT_CODE_ANNUAL,
                 "fs_div": fs_div,
             },
         )
+
+    def _resolve_corp_code(self, security: Security) -> str:
+        if security.corp_code:
+            return security.corp_code
+
+        stock_code = security.normalized_ticker.replace(".KS", "").replace(".KQ", "")
+        if not re.fullmatch(r"\d{6}", stock_code):
+            raise ProviderError(f"OpenDART corp_code missing for {security.ticker}")
+
+        corp_code = self._load_corp_codes_by_stock().get(stock_code)
+        if not corp_code:
+            raise ProviderError(f"OpenDART corp_code not found for {security.ticker}")
+        return corp_code
+
+    def _load_corp_codes_by_stock(self) -> dict[str, str]:
+        if self._corp_codes_by_stock is not None:
+            return self._corp_codes_by_stock
+
+        payload = self.http.get_bytes(
+            "https://opendart.fss.or.kr/api/corpCode.xml",
+            {"crtfc_key": self.api_key},
+        )
+        try:
+            with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+                names = archive.namelist()
+                if not names:
+                    raise ProviderError("OpenDART corpCode archive was empty")
+                with archive.open(names[0]) as xml_file:
+                    xml_text = xml_file.read().decode("utf-8", errors="replace")
+        except (zipfile.BadZipFile, OSError) as exc:
+            raise ProviderError("OpenDART corpCode payload could not be decoded") from exc
+
+        try:
+            root = ET.fromstring(xml_text)
+        except ET.ParseError as exc:
+            raise ProviderError("OpenDART corpCode XML could not be parsed") from exc
+
+        mapping: dict[str, str] = {}
+        for item in root.findall(".//list"):
+            stock_code = (item.findtext("stock_code") or "").strip()
+            corp_code = (item.findtext("corp_code") or "").strip()
+            if re.fullmatch(r"\d{6}", stock_code) and corp_code:
+                mapping[stock_code] = corp_code
+        self._corp_codes_by_stock = mapping
+        return mapping
 
     def _extract_metrics(self, rows: list[dict]) -> dict[str, float | None]:
         metrics: dict[str, float | None] = {

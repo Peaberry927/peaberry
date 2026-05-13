@@ -66,35 +66,45 @@ class QuantDataPipeline:
         self.store.clear_stale_fallback_values(security.normalized_ticker)
 
         output: list[AnnualFinancials] = []
+        errors: list[str] = []
         for year in years:
-            if security.is_korean:
-                output.append(
-                    self._save_or_raise(
-                        lambda item, fiscal_year=year: self.opendart.fetch_annual_financials(
-                            item, fiscal_year
-                        ),
-                        self.store.save_annual_financials,
-                        security,
-                        provider="opendart",
+            try:
+                if security.is_korean:
+                    output.append(
+                        self._save_or_raise(
+                            lambda item, fiscal_year=year: self.opendart.fetch_annual_financials(
+                                item, fiscal_year
+                            ),
+                            self.store.save_annual_financials,
+                            security,
+                            provider="opendart",
+                        )
                     )
-                )
+                    continue
+
+                if security.is_us:
+                    output.append(
+                        self._save_or_raise(
+                            lambda item, fiscal_year=year: self.yahoo.fetch_annual_financials(
+                                item, fiscal_year
+                            ),
+                            self.store.save_annual_financials,
+                            security,
+                            provider="yahoo",
+                        )
+                    )
+                    continue
+
+                raise ProviderError(f"No annual financials provider configured for {security.ticker}")
+            except ProviderError as exc:
+                errors.append(str(exc))
                 continue
 
-            if security.is_us:
-                output.append(
-                    self._save_or_raise(
-                        lambda item, fiscal_year=year: self.yahoo.fetch_annual_financials(
-                            item, fiscal_year
-                        ),
-                        self.store.save_annual_financials,
-                        security,
-                        provider="yahoo",
-                    )
-                )
-                continue
-
-            raise ProviderError(f"No annual financials provider configured for {security.ticker}")
-        return output
+        if output:
+            return output
+        if errors:
+            raise ProviderError(errors[0])
+        raise ProviderError(f"No annual financials provider configured for {security.ticker}")
 
     def get_valuation_fields(self, security: Security) -> ValuationFields:
         self.store.upsert_security(security)

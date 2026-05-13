@@ -43,13 +43,14 @@ class FakeNaver:
 
 
 class FakeOpenDart:
-    def __init__(self, should_fail: bool = False) -> None:
+    def __init__(self, should_fail: bool = False, fail_years: set[int] | None = None) -> None:
         self.calls = 0
         self.should_fail = should_fail
+        self.fail_years = fail_years or set()
 
     def fetch_annual_financials(self, security: Security, year: int) -> AnnualFinancials:
         self.calls += 1
-        if self.should_fail:
+        if self.should_fail or year in self.fail_years:
             raise ProviderError("OpenDART unavailable")
         return AnnualFinancials(
             ticker=security.normalized_ticker,
@@ -168,6 +169,14 @@ class PipelineTests(unittest.TestCase):
             pipeline.get_annual_financials(security, [2024])
 
         self.assertEqual(yahoo.annual_calls, 0)
+
+    def test_partial_annual_failures_keep_available_years(self) -> None:
+        pipeline = self.make_pipeline(opendart=FakeOpenDart(fail_years={2025}))
+        security = Security(ticker="000660", market="KOSPI", corp_code="00164779")
+
+        annuals = pipeline.get_annual_financials(security, [2025, 2024, 2023])
+
+        self.assertEqual([item.year for item in annuals], [2024, 2023])
 
     def test_clear_stale_fallback_values_removes_non_us_fallbacks_only(self) -> None:
         pipeline = self.make_pipeline()
