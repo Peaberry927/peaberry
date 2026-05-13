@@ -84,7 +84,7 @@
       .form-grid {
         display: grid;
         gap: 0.75rem;
-        grid-template-columns: 1.2fr 0.8fr 1fr 1.2fr auto;
+        grid-template-columns: 1.1fr 0.8fr 1fr 1.1fr 1.4fr auto;
       }
 
       .cards,
@@ -238,6 +238,7 @@
           <input id="market" placeholder="Market, e.g. KOSPI or US" />
           <input id="corp-code" placeholder="OpenDART corp_code" />
           <input id="years" placeholder="Years, e.g. 2024,2023,2022" />
+          <input id="dart-api-key" placeholder="OpenDART API key (optional)" />
           <button type="submit">조회</button>
         </div>
       </form>
@@ -254,10 +255,12 @@
         const market = document.getElementById("market").value.trim();
         const corpCode = document.getElementById("corp-code").value.trim();
         const years = document.getElementById("years").value.trim();
+        const dartApiKey = document.getElementById("dart-api-key").value.trim();
         const params = new URLSearchParams();
         if (market) params.set("market", market);
         if (corpCode) params.set("corp_code", corpCode);
         if (years) params.set("years", years);
+        if (dartApiKey) params.set("dart_api_key", dartApiKey);
 
         output.textContent = "Loading...";
         try {

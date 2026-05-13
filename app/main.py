@@ -34,6 +34,10 @@ def valuation_snapshot(
     corp_code: str | None = Query(default=None),
     name: str | None = Query(default=None),
     years: str | None = Query(default=None, description="Comma-separated fiscal years"),
+    dart_api_key: str | None = Query(
+        default=None,
+        description="Optional OpenDART key applied for this request",
+    ),
 ):
     security = Security(ticker=ticker, market=market, corp_code=corp_code, name=name)
     fiscal_years = (
@@ -41,7 +45,7 @@ def valuation_snapshot(
         if years
         else pipeline.default_fiscal_years(5)
     )
-    snapshot = pipeline.build_valuation_snapshot(security, fiscal_years)
+    snapshot = pipeline.build_valuation_snapshot(security, fiscal_years, dart_api_key=dart_api_key)
     body = snapshot.to_dict()
     body["display"] = build_display_snapshot(snapshot, fiscal_years)
     return body

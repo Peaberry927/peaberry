@@ -216,6 +216,20 @@ class PipelineTests(unittest.TestCase):
         self.assertIsNone(pipeline.store.load_valuation_fields("000660"))
         self.assertIsNotNone(pipeline.store.load_valuation_fields("AAPL"))
 
+    def test_build_snapshot_applies_request_scoped_dart_key(self) -> None:
+        opendart = FakeOpenDart(should_fail=True)
+        pipeline = self.make_pipeline(opendart=opendart)
+        security = Security(ticker="000660", market="KOSPI", corp_code="00164779")
+
+        snapshot = pipeline.build_valuation_snapshot(
+            security,
+            years=[2024],
+            dart_api_key="runtime-key",
+        )
+
+        self.assertEqual(opendart.api_key, "runtime-key")
+        self.assertTrue(snapshot.diagnostics)
+
 
 if __name__ == "__main__":
     unittest.main()

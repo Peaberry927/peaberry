@@ -132,9 +132,12 @@ class QuantDataPipeline:
         self,
         security: Security,
         years: list[int] | None = None,
+        dart_api_key: str | None = None,
     ) -> ValuationSnapshot:
         years = years or self.default_fiscal_years(5)
         diagnostics: list[str] = []
+        if dart_api_key:
+            self.opendart.api_key = dart_api_key
 
         quote = self._optional(lambda: self.get_current_price(security), diagnostics)
         annuals = self._optional(
