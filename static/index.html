@@ -7,14 +7,16 @@
     <style>
       :root {
         color-scheme: dark;
-        --bg: #0f1b2d;
-        --panel: #16253d;
-        --panel-2: #1d2f4d;
-        --line: #2a4063;
+        --bg: #091326;
+        --panel: #10213a;
+        --panel-soft: #172c4b;
+        --line: #2b4468;
+        --line-soft: rgba(143, 176, 217, 0.2);
         --text: #eef6ff;
-        --muted: #8fb0d9;
-        --accent: #7cc5ff;
+        --muted: #9bb8de;
+        --accent: #78c6ff;
         --good: #45d483;
+        --warn: #f9c25a;
         --bad: #ff6b85;
       }
 
@@ -24,7 +26,7 @@
 
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: var(--bg);
+        background: radial-gradient(circle at top, #122847 0%, var(--bg) 34%);
         color: var(--text);
         margin: 0;
         padding: 2rem;
@@ -36,21 +38,23 @@
       }
 
       h1 {
-        margin: 0 0 0.35rem;
+        font-size: 1.65rem;
+        margin: 0 0 0.25rem;
       }
 
       p {
         color: var(--muted);
+        margin: 0;
       }
 
       form,
       .panel {
-        background: linear-gradient(180deg, var(--panel), #132139);
+        background: linear-gradient(180deg, var(--panel), #0f1f36);
         border: 1px solid var(--line);
-        border-radius: 16px;
+        border-radius: 18px;
         box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
         margin-top: 1rem;
-        padding: 1rem;
+        padding: 1.1rem;
       }
 
       input,
@@ -59,7 +63,7 @@
       }
 
       input {
-        background: #0c1728;
+        background: #0a1528;
         border: 1px solid var(--line);
         border-radius: 10px;
         color: var(--text);
@@ -68,7 +72,7 @@
       }
 
       button {
-        background: #24527d;
+        background: linear-gradient(180deg, #2d679d, #24527d);
         border: 0;
         border-radius: 999px;
         color: white;
@@ -83,24 +87,60 @@
 
       .form-grid {
         display: grid;
-        gap: 0.75rem;
+        gap: 0.65rem;
         grid-template-columns: 1.1fr 0.8fr 1fr 1.1fr 1.4fr auto;
       }
 
-      .cards,
-      .valuation-grid,
-      .unit-grid {
+      .dashboard {
         display: grid;
-        gap: 0.75rem;
+        gap: 1rem;
+      }
+
+      .kpi-grid,
+      .valuation-grid,
+      .unit-grid,
+      .meta-grid {
+        display: grid;
+        gap: 0.7rem;
         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       }
 
+      .content-grid {
+        display: grid;
+        gap: 0.95rem;
+        grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+      }
+
+      .surface,
       .card,
       .unit-card {
-        background: var(--panel-2);
-        border: 1px solid var(--line);
-        border-radius: 14px;
+        background: linear-gradient(180deg, var(--panel-soft), #132844);
+        border: 1px solid var(--line-soft);
+        border-radius: 16px;
         padding: 0.85rem;
+      }
+
+      .surface {
+        padding: 1rem;
+      }
+
+      .section-head {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.7rem;
+      }
+
+      .section-head h2,
+      .section-head h3 {
+        font-size: 0.98rem;
+        letter-spacing: 0.01em;
+        margin: 0;
+      }
+
+      .section-head p {
+        color: var(--muted);
+        font-size: 0.8rem;
       }
 
       .label {
@@ -111,8 +151,21 @@
       }
 
       .value {
-        font-size: 1.15rem;
+        font-size: 1.2rem;
         font-weight: 800;
+      }
+
+      .kpi-grid .card {
+        background: linear-gradient(180deg, #1a3355, #132944);
+        min-height: 82px;
+      }
+
+      .kpi-grid .label {
+        font-size: 0.78rem;
+      }
+
+      .kpi-grid .value {
+        font-size: 1.25rem;
       }
 
       .unit {
@@ -121,10 +174,53 @@
         margin-left: 0.25rem;
       }
 
-      .table-wrap {
+      .status-pill {
+        border-radius: 999px;
         border: 1px solid var(--line);
+        color: var(--muted);
+        display: inline-flex;
+        font-size: 0.74rem;
+        font-weight: 700;
+        gap: 0.35rem;
+        padding: 0.22rem 0.56rem;
+      }
+
+      .status-pill.good {
+        border-color: rgba(69, 212, 131, 0.45);
+        color: var(--good);
+      }
+
+      .status-pill.warn {
+        border-color: rgba(249, 194, 90, 0.45);
+        color: var(--warn);
+      }
+
+      .status-pill.bad {
+        border-color: rgba(255, 107, 133, 0.45);
+        color: var(--bad);
+      }
+
+      .diagnostics {
+        background: linear-gradient(180deg, #162941, #102239);
+        border: 1px solid rgba(255, 107, 133, 0.35);
         border-radius: 14px;
-        margin-top: 0.75rem;
+        padding: 0.75rem;
+      }
+
+      .diagnostics ul {
+        margin: 0.4rem 0 0;
+        padding-left: 1.15rem;
+      }
+
+      .diagnostics li {
+        color: #ffbfd0;
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+
+      .table-wrap {
+        border: 1px solid var(--line-soft);
+        border-radius: 14px;
         overflow: auto;
       }
 
@@ -143,7 +239,7 @@
       }
 
       th {
-        background: #071426;
+        background: #0a1b31;
         color: #cfe4ff;
         font-size: 0.86rem;
         position: sticky;
@@ -170,6 +266,11 @@
         color: var(--muted);
       }
 
+      .estimate-row td:first-child {
+        color: var(--accent);
+        font-weight: 700;
+      }
+
       .fill-cell {
         align-items: center;
         display: grid;
@@ -188,30 +289,51 @@
         font-size: 0.84rem;
       }
 
+      .source-chip {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        display: inline-block;
+        font-size: 0.72rem;
+        margin-left: 0.35rem;
+        padding: 0.16rem 0.44rem;
+      }
+
       .notes {
         color: var(--muted);
-        line-height: 1.6;
-        margin: 0.75rem 0 0;
+        line-height: 1.55;
+        margin: 0;
         padding-left: 1.25rem;
       }
 
       .actions {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
+        gap: 0.45rem;
       }
 
       pre {
-        background: #111827;
+        background: #0a1628;
+        border: 1px solid var(--line-soft);
+        border-radius: 12px;
         color: #e5e7eb;
         overflow: auto;
-        padding: 1rem;
+        padding: 0.8rem;
         white-space: pre-wrap;
+      }
+
+      details summary {
+        color: var(--muted);
+        cursor: pointer;
       }
 
       .error {
         color: var(--bad);
+      }
+
+      .stack {
+        display: grid;
+        gap: 0.85rem;
       }
 
       @media (max-width: 780px) {
@@ -220,6 +342,10 @@
         }
 
         .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .content-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -295,34 +421,70 @@
       function renderSnapshot(snapshot) {
         const display = snapshot.display;
         const fills = loadManualFills(snapshot);
+        const completeness = completenessScore(display);
+        const diagnostics = snapshot.diagnostics || [];
         output.innerHTML = `
-          <div class="cards">
+          <div class="dashboard">
+          <div class="kpi-grid">
             ${summaryCard("종목", `${snapshot.security.name || ""} ${snapshot.security.ticker}`.trim())}
             ${summaryCard("시장", display.market.market || display.market.kind)}
             ${summaryCard("현재가", formatWithUnit(snapshot.quote?.price, snapshot.quote?.currency))}
             ${summaryCard("자료원", sourceLabel(snapshot))}
+            ${summaryCard("데이터 완성도", completenessPill(completeness))}
           </div>
-          <h2>단위 안내</h2>
-          <div class="unit-grid">
-            ${unitCard("매출/영업이익/순이익", display.units.amount.display, `${display.units.amount.raw} 원자료 ÷ ${display.units.amount.divisor.toLocaleString()}`)}
-            ${unitCard("EPS/BPS", display.units.per_share.display, "주당 지표")}
-            ${unitCard("PER/PBR", display.units.multiple.display, "배수")}
-            ${unitCard("ROE", display.units.percent.display, "순이익 ÷ 자본총계")}
+          ${diagnosticsBanner(diagnostics)}
+          <div class="content-grid">
+            <section class="surface stack">
+              <div>
+                <div class="section-head">
+                  <h2>단위/계산 체계</h2>
+                  <span class="status-pill">raw → display</span>
+                </div>
+                <div class="unit-grid">
+                  ${unitCard("매출/영업이익/순이익", display.units.amount.display, `${display.units.amount.raw} 원자료 ÷ ${display.units.amount.divisor.toLocaleString()}`)}
+                  ${unitCard("EPS/BPS", display.units.per_share.display, "주당 지표")}
+                  ${unitCard("PER/PBR", display.units.multiple.display, "배수")}
+                  ${unitCard("ROE", display.units.percent.display, "순이익 ÷ 자본총계")}
+                </div>
+              </div>
+              <div>
+                <div class="section-head">
+                  <h2>연간 재무 정보</h2>
+                  <p>추정치 기간은 (E)로 표시</p>
+                </div>
+                ${annualTable(display, fills)}
+              </div>
+            </section>
+            <aside class="surface stack">
+              <div>
+                <div class="section-head">
+                  <h3>밸류에이션 / 추정</h3>
+                </div>
+                <div class="valuation-grid">${valuationCards(display.valuation_items, fills)}</div>
+              </div>
+              <div>
+                <div class="section-head">
+                  <h3>수동 보정</h3>
+                </div>
+                <div class="actions">
+                  <button type="button" id="save-fills">빈 칸 저장</button>
+                  <button type="button" class="secondary" id="clear-fills">저장값 지우기</button>
+                </div>
+                <pre id="fill-export"></pre>
+              </div>
+            </aside>
           </div>
-          <h2>연간 재무정보</h2>
-          ${annualTable(display, fills)}
-          <h2>PER/PBR/EPS/BPS/추정</h2>
-          <div class="valuation-grid">${valuationCards(display.valuation_items, fills)}</div>
-          <div class="actions">
-            <button type="button" id="save-fills">빈 칸 저장</button>
-            <button type="button" class="secondary" id="clear-fills">저장값 지우기</button>
-          </div>
-          <pre id="fill-export"></pre>
           <details>
             <summary>Raw API response</summary>
             <pre>${escapeHtml(JSON.stringify(snapshot, null, 2))}</pre>
           </details>
-          <ul class="notes">${display.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
+          <div class="surface">
+            <div class="section-head">
+              <h3>해석 참고</h3>
+            </div>
+            <ul class="notes">${display.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
+          </div>
+          </div>
         `;
         for (const input of output.querySelectorAll(".manual-fill")) {
           input.value = fills[input.dataset.fillKey] ?? "";
@@ -336,7 +498,7 @@
         const multipleUnit = escapeHtml(display.units.multiple.display);
         const percentUnit = escapeHtml(display.units.percent.display);
         const rows = display.annual_rows.map((row) => `
-          <tr>
+          <tr class="${row.is_estimate ? "estimate-row" : ""}">
             <td>${escapeHtml(row.period || `${row.year}.12`)}</td>
             ${valueCell(row.values.revenue, fillKey(row.values.revenue.fill), fills)}
             ${valueCell(row.values.operating_income, fillKey(row.values.operating_income.fill), fills)}
@@ -346,7 +508,7 @@
             ${valueCell(row.values.per, fillKey(row.values.per.fill), fills)}
             ${valueCell(row.values.bps, fillKey(row.values.bps.fill), fills)}
             ${valueCell(row.values.pbr, fillKey(row.values.pbr.fill), fills)}
-            <td class="source">${escapeHtml(row.source || "-")}${row.is_fallback ? " fallback" : ""}</td>
+            <td class="source">${escapeHtml(row.source || "-")}${sourceChips(row)}</td>
           </tr>
         `).join("");
         return `
@@ -379,7 +541,7 @@
             <div class="card">
               <span class="label">${escapeHtml(item.label)} <span class="unit">${escapeHtml(item.value.unit)}</span></span>
               ${valueCell(item.value, key, fills, true)}
-              <div class="source">${escapeHtml(item.source || "-")}${item.is_fallback ? " fallback" : ""}</div>
+              <div class="source">${escapeHtml(item.source || "-")}${item.is_fallback ? '<span class="source-chip">fallback</span>' : ""}</div>
             </div>
           `;
         }).join("");
@@ -444,7 +606,19 @@
       }
 
       function summaryCard(label, value) {
-        return `<div class="card"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(value || "-")}</span></div>`;
+        let meta = "";
+        let text = value;
+        if (typeof value === "object" && value !== null) {
+          meta = value.meta || "";
+          text = value.text || "-";
+        }
+        return `
+          <div class="card">
+            <span class="label">${escapeHtml(label)}</span>
+            <span class="value">${escapeHtml(text || "-")}</span>
+            ${meta ? `<div class="source">${meta}</div>` : ""}
+          </div>
+        `;
       }
 
       function unitCard(label, unit, note) {
@@ -462,6 +636,42 @@
       function formatWithUnit(value, unit) {
         if (value === null || value === undefined) return "-";
         return `${Number(value).toLocaleString()} ${unit || ""}`.trim();
+      }
+
+      function sourceChips(row) {
+        const chips = [];
+        if (row.is_estimate) chips.push('<span class="source-chip">estimate</span>');
+        if (row.is_fallback) chips.push('<span class="source-chip">fallback</span>');
+        return chips.join("");
+      }
+
+      function completenessScore(display) {
+        const annualCount = display.annual_rows.length;
+        const annualMetrics = 8;
+        const valuationCount = display.valuation_items.length;
+        const total = annualCount * annualMetrics + valuationCount;
+        const missing = (display.missing_fields || []).length;
+        if (total <= 0) return 0;
+        return Math.max(0, Math.min(100, Math.round(((total - missing) / total) * 100)));
+      }
+
+      function completenessPill(score) {
+        if (score >= 85) return { text: `${score}%`, meta: '<span class="status-pill good">stable</span>' };
+        if (score >= 60) return { text: `${score}%`, meta: '<span class="status-pill warn">partial</span>' };
+        return { text: `${score}%`, meta: '<span class="status-pill bad">sparse</span>' };
+      }
+
+      function diagnosticsBanner(diagnostics) {
+        if (!diagnostics || diagnostics.length === 0) return "";
+        return `
+          <div class="diagnostics">
+            <div class="section-head">
+              <h3>수집 진단</h3>
+              <span class="status-pill bad">check required</span>
+            </div>
+            <ul>${diagnostics.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+          </div>
+        `;
       }
 
       function escapeHtml(value) {
