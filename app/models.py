@@ -115,6 +115,11 @@ class AnnualFinancials(ProviderResult):
     assets: float | None = None
     liabilities: float | None = None
     equity: float | None = None
+    eps: float | None = None
+    bps: float | None = None
+    per: float | None = None
+    pbr: float | None = None
+    is_estimate: bool = False
 
 
 @dataclass(frozen=True)
@@ -124,6 +129,8 @@ class ValuationFields(ProviderResult):
     pbr: float | None = None
     eps: float | None = None
     bps: float | None = None
+    estimated_per: float | None = None
+    estimated_eps: float | None = None
 
 
 @dataclass(frozen=True)

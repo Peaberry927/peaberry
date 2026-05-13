@@ -6,7 +6,8 @@ from app.models import AnnualFinancials, Security, ValuationSnapshot
 
 
 FINANCIAL_FIELDS = ("revenue", "operating_income", "net_income")
-VALUATION_FIELDS = ("eps", "per", "bps", "pbr")
+ROW_VALUATION_FIELDS = ("eps", "per", "bps", "pbr")
+VALUATION_FIELDS = ("eps", "per", "bps", "pbr", "estimated_eps", "estimated_per")
 
 FIELD_LABELS = {
     "revenue": "매출",
@@ -17,6 +18,8 @@ FIELD_LABELS = {
     "per": "PER",
     "bps": "BPS",
     "pbr": "PBR",
+    "estimated_eps": "추정 EPS",
+    "estimated_per": "추정 PER",
 }
 
 
@@ -100,8 +103,10 @@ def _annual_row(
 ) -> dict[str, Any]:
     row = {
         "year": year,
+        "period": f"{year}.12(E)" if annual and annual.is_estimate else f"{year}.12",
         "source": annual.source if annual else None,
         "is_fallback": annual.is_fallback if annual else False,
+        "is_estimate": annual.is_estimate if annual else False,
         "values": {},
     }
     for field in FINANCIAL_FIELDS:
@@ -123,6 +128,20 @@ def _annual_row(
         year=year,
         field="roe",
     )
+    for field in ROW_VALUATION_FIELDS:
+        raw_value = getattr(annual, field) if annual else None
+        unit = (
+            units["multiple"]["display"]
+            if field in {"per", "pbr"}
+            else units["per_share"]["display"]
+        )
+        row["values"][field] = _value_cell(
+            raw_value,
+            unit,
+            fill_scope="annual_financials",
+            year=year,
+            field=field,
+        )
     return row
 
 
@@ -138,6 +157,8 @@ def _valuation_items(
         "per": units["multiple"]["display"],
         "bps": units["per_share"]["display"],
         "pbr": units["multiple"]["display"],
+        "estimated_eps": units["per_share"]["display"],
+        "estimated_per": units["multiple"]["display"],
     }
 
     items = []
@@ -234,12 +255,14 @@ def _notes(security: Security, units: dict[str, Any]) -> list[str]:
     if security.is_korean:
         return [
             f"OpenDART 금액은 원 단위 원자료를 {amount['display']} 단위로 나누어 표시합니다.",
+            "연도별 EPS/PER/BPS/PBR은 Naver 실적표와 현재가 기반 파생 계산값을 함께 사용합니다.",
             "PER/PBR은 배수, ROE는 %, EPS/BPS는 주당 통화 단위로 별도 표시합니다.",
             "빈 칸은 표시 단위 기준으로 수동 입력할 수 있으며 원자료 값은 변경하지 않습니다.",
         ]
     if security.is_us:
         return [
             f"Yahoo 재무 금액은 {amount['raw']} 원자료를 {amount['display']} 단위로 나누어 표시합니다.",
+            "연도별 EPS/PER/BPS/PBR은 제공값이 없으면 현재가 및 재무값에서 파생 계산합니다.",
             "PER/PBR은 배수, ROE는 %, EPS/BPS는 주당 통화 단위로 별도 표시합니다.",
             "빈 칸은 표시 단위 기준으로 수동 입력할 수 있으며 원자료 값은 변경하지 않습니다.",
         ]

@@ -43,9 +43,14 @@ class YahooFinanceProvider:
         per = self._raw(quote.get("trailingPE")) or self._raw(summary.get("trailingPE"))
         pbr = self._raw(quote.get("priceToBook")) or self._raw(summary.get("priceToBook"))
         eps = self._raw(quote.get("epsTrailingTwelveMonths"))
+        estimated_per = self._raw(quote.get("forwardPE")) or self._raw(summary.get("forwardPE"))
+        estimated_eps = self._raw(quote.get("epsForward")) or self._raw(summary.get("forwardEps"))
         bps = None
 
-        if all(value is None for value in (per, pbr, eps, bps)):
+        if all(
+            value is None
+            for value in (per, pbr, eps, bps, estimated_per, estimated_eps)
+        ):
             raise ProviderError(f"Yahoo valuation fields missing for {security.ticker}")
 
         return ValuationFields(
@@ -54,6 +59,8 @@ class YahooFinanceProvider:
             pbr=pbr,
             eps=eps,
             bps=bps,
+            estimated_per=estimated_per,
+            estimated_eps=estimated_eps,
             source=self.source,
             as_of=utc_now_iso(),
             is_fallback=True,

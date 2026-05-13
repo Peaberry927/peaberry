@@ -13,6 +13,7 @@ class FakeNaver:
     def __init__(self) -> None:
         self.price_calls = 0
         self.valuation_calls = 0
+        self.annual_metric_calls = 0
 
     def fetch_current_price(self, security: Security) -> Quote:
         self.price_calls += 1
@@ -40,6 +41,23 @@ class FakeNaver:
             as_of=utc_now_iso(),
             is_fallback=False,
         )
+
+    def fetch_annual_metrics(self, security: Security) -> list[AnnualFinancials]:
+        self.annual_metric_calls += 1
+        return [
+            AnnualFinancials(
+                ticker=security.normalized_ticker,
+                year=2025,
+                revenue=150,
+                operating_income=30,
+                net_income=18,
+                eps=450,
+                per=9.2,
+                source="naver",
+                as_of=utc_now_iso(),
+                is_estimate=True,
+            )
+        ]
 
 
 class FakeOpenDart:
@@ -229,6 +247,24 @@ class PipelineTests(unittest.TestCase):
 
         self.assertEqual(opendart.api_key, "runtime-key")
         self.assertTrue(snapshot.diagnostics)
+
+    def test_snapshot_merges_naver_estimate_and_derives_missing_ratios(self) -> None:
+        naver = FakeNaver()
+        opendart = FakeOpenDart(fail_years={2025})
+        pipeline = self.make_pipeline(naver=naver, opendart=opendart)
+        security = Security(ticker="000660", market="KOSPI", corp_code="00164779")
+
+        snapshot = pipeline.build_valuation_snapshot(security, years=[2025, 2024])
+
+        self.assertEqual(naver.annual_metric_calls, 1)
+        by_year = {row.year: row for row in snapshot.annual_financials}
+        self.assertIn(2025, by_year)
+        self.assertTrue(by_year[2025].is_estimate)
+        self.assertEqual(by_year[2025].eps, 450)
+        self.assertEqual(by_year[2025].per, 9.2)
+        # 2024 row gets derived BPS/PBR when possible.
+        self.assertIsNotNone(by_year[2024].bps)
+        self.assertIsNotNone(by_year[2024].pbr)
 
 
 if __name__ == "__main__":

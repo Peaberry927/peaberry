@@ -67,8 +67,13 @@ class SQLiteStore:
                     assets REAL,
                     liabilities REAL,
                     equity REAL,
+                    eps REAL,
+                    bps REAL,
+                    per REAL,
+                    pbr REAL,
                     source TEXT NOT NULL,
                     is_fallback INTEGER NOT NULL DEFAULT 0,
+                    is_estimate INTEGER NOT NULL DEFAULT 0,
                     as_of TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     PRIMARY KEY (ticker, year)
@@ -80,6 +85,8 @@ class SQLiteStore:
                     pbr REAL,
                     eps REAL,
                     bps REAL,
+                    estimated_per REAL,
+                    estimated_eps REAL,
                     source TEXT NOT NULL,
                     is_fallback INTEGER NOT NULL DEFAULT 0,
                     as_of TEXT NOT NULL,
@@ -101,6 +108,18 @@ class SQLiteStore:
                     ON provider_events(ticker, created_at);
                 """
             )
+            self._ensure_column(connection, "annual_financials", "eps", "REAL")
+            self._ensure_column(connection, "annual_financials", "bps", "REAL")
+            self._ensure_column(connection, "annual_financials", "per", "REAL")
+            self._ensure_column(connection, "annual_financials", "pbr", "REAL")
+            self._ensure_column(
+                connection,
+                "annual_financials",
+                "is_estimate",
+                "INTEGER NOT NULL DEFAULT 0",
+            )
+            self._ensure_column(connection, "valuation_fields", "estimated_per", "REAL")
+            self._ensure_column(connection, "valuation_fields", "estimated_eps", "REAL")
 
     def upsert_security(self, security: Security) -> None:
         with self.connect() as connection:
@@ -186,9 +205,10 @@ class SQLiteStore:
                 INSERT INTO annual_financials
                     (
                         ticker, year, revenue, operating_income, net_income, assets,
-                        liabilities, equity, source, is_fallback, as_of, updated_at
+                        liabilities, equity, eps, bps, per, pbr, source,
+                        is_fallback, is_estimate, as_of, updated_at
                     )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(ticker, year) DO UPDATE SET
                     revenue=excluded.revenue,
                     operating_income=excluded.operating_income,
@@ -196,8 +216,13 @@ class SQLiteStore:
                     assets=excluded.assets,
                     liabilities=excluded.liabilities,
                     equity=excluded.equity,
+                    eps=excluded.eps,
+                    bps=excluded.bps,
+                    per=excluded.per,
+                    pbr=excluded.pbr,
                     source=excluded.source,
                     is_fallback=excluded.is_fallback,
+                    is_estimate=excluded.is_estimate,
                     as_of=excluded.as_of,
                     updated_at=excluded.updated_at
                 """,
@@ -210,8 +235,13 @@ class SQLiteStore:
                     financials.assets,
                     financials.liabilities,
                     financials.equity,
+                    financials.eps,
+                    financials.bps,
+                    financials.per,
+                    financials.pbr,
                     financials.source,
                     int(financials.is_fallback),
+                    int(financials.is_estimate),
                     financials.as_of,
                     utc_now_iso(),
                 ),
@@ -222,13 +252,18 @@ class SQLiteStore:
             connection.execute(
                 """
                 INSERT INTO valuation_fields
-                    (ticker, per, pbr, eps, bps, source, is_fallback, as_of, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (
+                        ticker, per, pbr, eps, bps, estimated_per, estimated_eps,
+                        source, is_fallback, as_of, updated_at
+                    )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(ticker) DO UPDATE SET
                     per=excluded.per,
                     pbr=excluded.pbr,
                     eps=excluded.eps,
                     bps=excluded.bps,
+                    estimated_per=excluded.estimated_per,
+                    estimated_eps=excluded.estimated_eps,
                     source=excluded.source,
                     is_fallback=excluded.is_fallback,
                     as_of=excluded.as_of,
@@ -240,6 +275,8 @@ class SQLiteStore:
                     fields.pbr,
                     fields.eps,
                     fields.bps,
+                    fields.estimated_per,
+                    fields.estimated_eps,
                     fields.source,
                     int(fields.is_fallback),
                     fields.as_of,
@@ -298,8 +335,13 @@ class SQLiteStore:
                 assets=row["assets"],
                 liabilities=row["liabilities"],
                 equity=row["equity"],
+                eps=row["eps"],
+                bps=row["bps"],
+                per=row["per"],
+                pbr=row["pbr"],
                 source=row["source"],
                 is_fallback=bool(row["is_fallback"]),
+                is_estimate=bool(row["is_estimate"]),
                 as_of=row["as_of"],
             )
             for row in rows
@@ -315,6 +357,8 @@ class SQLiteStore:
             pbr=row["pbr"],
             eps=row["eps"],
             bps=row["bps"],
+            estimated_per=row["estimated_per"],
+            estimated_eps=row["estimated_eps"],
             source=row["source"],
             is_fallback=bool(row["is_fallback"]),
             as_of=row["as_of"],
@@ -367,4 +411,19 @@ class SQLiteStore:
         with self.connect() as connection:
             rows = connection.execute(f"SELECT * FROM {table}").fetchall()
         return [dict(row) for row in rows]
+
+    def _ensure_column(
+        self,
+        connection: sqlite3.Connection,
+        table: str,
+        column: str,
+        ddl: str,
+    ) -> None:
+        columns = {
+            row["name"]
+            for row in connection.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+        if column in columns:
+            return
+        connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 

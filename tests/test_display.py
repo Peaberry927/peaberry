@@ -25,6 +25,10 @@ class DisplaySnapshotTests(unittest.TestCase):
                     operating_income=20_000_000_000,
                     net_income=10_000_000_000,
                     equity=50_000_000_000,
+                    eps=24_000,
+                    per=8.1,
+                    bps=149_000,
+                    pbr=1.3,
                     source="opendart",
                     as_of=utc_now_iso(),
                 )
@@ -49,6 +53,8 @@ class DisplaySnapshotTests(unittest.TestCase):
         self.assertEqual(display["units"]["per_share"]["display"], "KRW/주")
         self.assertEqual(display["annual_rows"][0]["values"]["revenue"]["display"], 1000)
         self.assertEqual(display["annual_rows"][0]["values"]["roe"]["display"], 20)
+        self.assertEqual(display["annual_rows"][0]["values"]["eps"]["display"], 24000)
+        self.assertEqual(display["annual_rows"][0]["values"]["per"]["display"], 8.1)
 
     def test_us_financials_use_usd_millions(self) -> None:
         snapshot = ValuationSnapshot(
@@ -108,6 +114,8 @@ class DisplaySnapshotTests(unittest.TestCase):
                 pbr=9,
                 eps=None,
                 bps=None,
+                estimated_per=15,
+                estimated_eps=10,
                 source="yahoo",
                 as_of=utc_now_iso(),
                 is_fallback=True,

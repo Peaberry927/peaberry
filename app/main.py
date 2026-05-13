@@ -3,12 +3,13 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.display import build_display_snapshot
 from app.models import Security
+from app.parsing import parse_year_tokens
 from app.pipeline import QuantDataPipeline
 from app.storage import SQLiteStore
 
@@ -40,11 +41,14 @@ def valuation_snapshot(
     ),
 ):
     security = Security(ticker=ticker, market=market, corp_code=corp_code, name=name)
-    fiscal_years = (
-        [int(item.strip()) for item in years.split(",") if item.strip()]
-        if years
-        else pipeline.default_fiscal_years(5)
-    )
+    try:
+        fiscal_years = (
+            parse_year_tokens(years)
+            if years
+            else pipeline.default_fiscal_years(5)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     snapshot = pipeline.build_valuation_snapshot(security, fiscal_years, dart_api_key=dart_api_key)
     body = snapshot.to_dict()
     body["display"] = build_display_snapshot(snapshot, fiscal_years)

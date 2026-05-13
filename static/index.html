@@ -130,7 +130,7 @@
 
       table {
         border-collapse: collapse;
-        min-width: 920px;
+        min-width: 1280px;
         width: 100%;
       }
 
@@ -311,7 +311,7 @@
           </div>
           <h2>연간 재무정보</h2>
           ${annualTable(display, fills)}
-          <h2>PER/PBR/EPS/BPS</h2>
+          <h2>PER/PBR/EPS/BPS/추정</h2>
           <div class="valuation-grid">${valuationCards(display.valuation_items, fills)}</div>
           <div class="actions">
             <button type="button" id="save-fills">빈 칸 저장</button>
@@ -332,14 +332,20 @@
 
       function annualTable(display, fills) {
         const amountUnit = escapeHtml(display.units.amount.display);
+        const perShareUnit = escapeHtml(display.units.per_share.display);
+        const multipleUnit = escapeHtml(display.units.multiple.display);
         const percentUnit = escapeHtml(display.units.percent.display);
         const rows = display.annual_rows.map((row) => `
           <tr>
-            <td>${row.year}</td>
+            <td>${escapeHtml(row.period || `${row.year}.12`)}</td>
             ${valueCell(row.values.revenue, fillKey(row.values.revenue.fill), fills)}
             ${valueCell(row.values.operating_income, fillKey(row.values.operating_income.fill), fills)}
             ${valueCell(row.values.net_income, fillKey(row.values.net_income.fill), fills)}
             ${valueCell(row.values.roe, fillKey(row.values.roe.fill), fills)}
+            ${valueCell(row.values.eps, fillKey(row.values.eps.fill), fills)}
+            ${valueCell(row.values.per, fillKey(row.values.per.fill), fills)}
+            ${valueCell(row.values.bps, fillKey(row.values.bps.fill), fills)}
+            ${valueCell(row.values.pbr, fillKey(row.values.pbr.fill), fills)}
             <td class="source">${escapeHtml(row.source || "-")}${row.is_fallback ? " fallback" : ""}</td>
           </tr>
         `).join("");
@@ -348,11 +354,15 @@
             <table>
               <thead>
                 <tr>
-                  <th>연도</th>
+                  <th>기간</th>
                   <th>매출<span>${amountUnit}</span></th>
                   <th>영업이익<span>${amountUnit}</span></th>
                   <th>순이익<span>${amountUnit}</span></th>
                   <th>ROE<span>${percentUnit}</span></th>
+                  <th>EPS<span>${perShareUnit}</span></th>
+                  <th>PER<span>${multipleUnit}</span></th>
+                  <th>BPS<span>${perShareUnit}</span></th>
+                  <th>PBR<span>${multipleUnit}</span></th>
                   <th>자료원</th>
                 </tr>
               </thead>
