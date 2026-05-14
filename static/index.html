@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Peaberry Quant Dashboard</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --line: #d8e2ef;
+        --line-strong: #c6d4e7;
+        --text: #12253a;
+        --muted: #5f7088;
+        --navy: #1f4f92;
+        --up: #18995b;
+        --down: #d43a4e;
+        --neutral: #6f7f95;
+        --risk: #be6800;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 1360px;
+        padding: 1.2rem;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .surface {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: 0 6px 24px rgba(16, 35, 65, 0.06);
+        padding: 1rem;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      form {
+        margin-top: 0.75rem;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 0.7fr 0.9fr 0.9fr 1fr auto;
+        gap: 0.5rem;
+      }
+
+      input,
+      button {
+        font: inherit;
+      }
+
+      input {
+        padding: 0.62rem 0.72rem;
+        border: 1px solid var(--line-strong);
+        border-radius: 10px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 0.62rem 0.95rem;
+        cursor: pointer;
+        color: #fff;
+        font-weight: 700;
+        background: var(--navy);
+      }
+
+      button.secondary {
+        background: #496284;
+      }
+
+      .panel {
+        margin-top: 1rem;
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 0.6rem;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 0.8rem;
+      }
+
+      .label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .value {
+        display: block;
+        margin-top: 0.28rem;
+        font-size: 1.26rem;
+        font-weight: 800;
+      }
+
+      .status {
+        display: inline-flex;
+        margin-top: 0.45rem;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-size: 0.73rem;
+        font-weight: 700;
+        padding: 0.16rem 0.52rem;
+      }
+
+      .status.up {
+        color: var(--up);
+        border-color: rgba(24, 153, 91, 0.35);
+      }
+
+      .status.down {
+        color: var(--down);
+        border-color: rgba(212, 58, 78, 0.35);
+      }
+
+      .status.neutral {
+        color: var(--neutral);
+      }
+
+      .status.risk {
+        color: var(--risk);
+        border-color: rgba(190, 104, 0, 0.38);
+      }
+
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.42rem;
+        margin-top: 0.75rem;
+      }
+
+      .tab-btn {
+        border: 1px solid #d4dff0;
+        background: #ebf1fb;
+        color: #223f64;
+      }
+
+      .tab-btn.active {
+        background: var(--navy);
+        color: #fff;
+      }
+
+      .tab-content {
+        display: none;
+        margin-top: 0.7rem;
+      }
+
+      .tab-content.active {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1.85fr 1fr;
+        gap: 0.65rem;
+      }
+
+      .table-wrap {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: auto;
+        background: #fff;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #edf2fa;
+        padding: 0.88rem 0.72rem;
+        text-align: right;
+        font-size: 0.88rem;
+      }
+
+      th {
+        background: #f7faff;
+        color: #35547a;
+      }
+
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+
+      .tabular {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .estimate-col {
+        background: #f8f4ff;
+      }
+
+      .alert-list {
+        display: grid;
+        gap: 0.45rem;
+      }
+
+      .alert-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0.58rem;
+        cursor: pointer;
+        background: #fff;
+      }
+
+      .alert-item.active {
+        border-color: #8fb4e2;
+        background: #f2f7ff;
+      }
+
+      .chart-box {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 0.66rem;
+      }
+
+      .banner {
+        margin-bottom: 0.6rem;
+        border-radius: 10px;
+        border: 1px solid #f1d192;
+        background: #fff8e8;
+        color: #885c00;
+        font-size: 0.84rem;
+        padding: 0.55rem 0.68rem;
+      }
+
+      .error {
+        border-radius: 10px;
+        border: 1px solid #f0bcc6;
+        background: #fff4f6;
+        color: #8f2435;
+        padding: 0.7rem;
+      }
+
+      pre {
+        background: #112238;
+        color: #e7edf8;
+        border-radius: 10px;
+        padding: 0.75rem;
+        overflow: auto;
+      }
+
+      @media (max-width: 980px) {
+        .form-grid,
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="surface">
+        <h1>Quant Investment Dashboard</h1>
+        <p class="meta">카드형 레이아웃 · 탭 기반 화면 분리 · API/화면/다운로드 계산 일관성</p>
+        <form id="snapshot-form">
+          <div class="form-grid">
+            <input id="ticker" placeholder="Ticker (e.g. 000660, AAPL)" required />
+            <input id="market" placeholder="Market" />
+            <input id="corp-code" placeholder="corp_code" />
+            <input id="years" placeholder="Years (optional)" />
+            <input id="dart-api-key" placeholder="OpenDART API key (optional)" />
+            <button type="submit">Load</button>
+          </div>
+        </form>
+      </section>
+      <section id="output" class="surface panel">종목을 조회하면 탭형 대시보드가 표시됩니다.</section>
+    </main>
+    <script>
+      const form = document.getElementById("snapshot-form");
+      const output = document.getElementById("output");
+      let lastSnapshot = null;
+      let lastParams = null;
+      let activeTab = "market-regime";
+      let selectedAlertId = null;
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const params = collectParams();
+        lastParams = params;
+        await requestSnapshot(params);
+      });
+
+      output.addEventListener("click", (event) => {
+        const tabButton = event.target.closest("[data-tab]");
+        if (tabButton) {
+          activeTab = tabButton.dataset.tab;
+          renderSnapshot(lastSnapshot);
+          return;
+        }
+        const alertItem = event.target.closest("[data-alert-id]");
+        if (alertItem) {
+          selectedAlertId = alertItem.dataset.alertId;
+          renderSnapshot(lastSnapshot);
+          return;
+        }
+        if (event.target.id === "download-csv" || event.target.id === "download-excel") {
+          if (!lastSnapshot || !lastParams) return;
+          const format = event.target.id === "download-csv" ? "csv" : "excel";
+          const query = new URLSearchParams(lastParams.query);
+          query.set("format", format);
+          window.open(`/api/snapshot/${encodeURIComponent(lastSnapshot.security.ticker)}/download?${query.toString()}`, "_blank");
+        }
+        if (event.target.id === "download-proposal") {
+          window.open("/api/proposal/download", "_blank");
+        }
+      });
+
+      async function requestSnapshot(params) {
+        output.textContent = "Loading...";
+        try {
+          const response = await fetch(`/api/snapshot/${encodeURIComponent(params.ticker)}?${new URLSearchParams(params.query).toString()}`);
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.detail || "Snapshot request failed");
+          lastSnapshot = payload;
+          selectedAlertId = payload.display?.risk?.selected_alert_id || null;
+          renderSnapshot(payload);
+        } catch (error) {
+          if (lastSnapshot) {
+            renderSnapshot(lastSnapshot, `데이터 갱신 실패로 마지막 정상 데이터(last-known-good)를 표시합니다. 원인: ${error.message}`);
+          } else {
+            output.innerHTML = `<div class="error"><strong>요청 실패</strong><div>${escapeHtml(error.message)}</div></div>`;
+          }
+        }
+      }
+
+      function collectParams() {
+        const ticker = document.getElementById("ticker").value.trim();
+        const market = document.getElementById("market").value.trim();
+        const corpCode = document.getElementById("corp-code").value.trim();
+        const years = document.getElementById("years").value.trim();
+        const dartApiKey = document.getElementById("dart-api-key").value.trim();
+        const query = {};
+        if (market) query.market = market;
+        if (corpCode) query.corp_code = corpCode;
+        if (years) query.years = years;
+        if (dartApiKey) query.dart_api_key = dartApiKey;
+        return { ticker, query };
+      }
+
+      function renderSnapshot(snapshot, warning = "") {
+        if (!snapshot) return;
+        const display = snapshot.display || {};
+        const meta = display.meta || {};
+        const fair = display.fair_value || {};
+        const diagnostics = snapshot.diagnostics || [];
+        const missing = display.missing_summary || {};
+        const missingItems = (missing.items || []).map((item) => `${item.year || "current"} ${item.label || item.field}`).join(", ");
+        output.innerHTML = `
+          ${warning ? `<div class="banner">${escapeHtml(warning)}</div>` : ""}
+          ${diagnostics.length ? `<div class="banner">외부 데이터 취득 실패: ${diagnostics.map(escapeHtml).join(" | ")}</div>` : ""}
+          ${(missing.count || 0) > 0 ? `<div class="banner">${escapeHtml(missing.message || `결측 ${missing.count}건`)}</div>` : ""}
+          ${(missing.count || 0) > 0 ? `<div class="meta" style="margin-bottom:0.45rem;">누락 항목 예시: ${escapeHtml(missingItems || "-")}</div>` : ""}
+          <div class="kpi-grid">
+            ${kpi("Ticker", snapshot.security.ticker, "neutral")}
+            ${kpi("Current", `${fair.current_price_formatted || "-"} ${snapshot.quote?.currency || ""}`, trend(fair.disparity_pct))}
+            ${kpi("Fair Value", `${fair.fair_value_formatted || "-"} ${snapshot.quote?.currency || ""}`, trend(fair.disparity_pct))}
+            ${kpi("Disparity", `${fair.disparity_pct_formatted || "-"}%`, trend(fair.disparity_pct))}
+            ${kpi("Source", meta.source || "-", "neutral")}
+            ${kpi("Confidence", formatPercent(meta.confidence), confidenceTrend(meta.confidence))}
+          </div>
+          <p class="meta" style="margin-top:0.55rem;">as-of: ${escapeHtml(meta.as_of || "-")} · delay: ${escapeHtml(String(meta.delay_sec ?? "-"))} sec</p>
+          <div style="margin-top:0.65rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+            <button type="button" class="secondary" id="download-csv">CSV 다운로드</button>
+            <button type="button" class="secondary" id="download-excel">Excel 다운로드</button>
+            <button type="button" class="secondary" id="download-proposal">제안서 다운로드 (DOCX)</button>
+          </div>
+          <div class="tabs">${(display.tabs || []).map((tab) => `<button type="button" class="tab-btn ${tab.id === activeTab ? "active" : ""}" data-tab="${escapeHtml(tab.id)}">${escapeHtml(tab.label)}</button>`).join("")}</div>
+          ${tabSection("market-regime", marketRegimeMarkup(display.market_regime), activeTab)}
+          ${tabSection("holdings", holdingsMarkup(display.holdings || [], display.holdings_policy || {}), activeTab)}
+          ${tabSection("fair-value", fairValueMarkup(fair), activeTab)}
+          ${tabSection("risk", riskMarkup(display.risk || {}), activeTab)}
+          ${tabSection("performance", performanceMarkup(display.portfolio_performance || {}), activeTab)}
+          <details style="margin-top:0.7rem;"><summary class="meta">Raw response</summary><pre>${escapeHtml(JSON.stringify(snapshot, null, 2))}</pre></details>
+          <ul>${(display.notes || []).map((note) => `<li class="meta">${escapeHtml(note)}</li>`).join("")}</ul>
+        `;
+      }
+
+      function tabSection(id, inner, current) {
+        return `<section class="tab-content ${id === current ? "active" : ""}">${inner}</section>`;
+      }
+
+      function kpi(label, value, cls) {
+        return `<article class="card"><span class="label">${escapeHtml(label)}</span><span class="value tabular">${escapeHtml(value)}</span><span class="status ${escapeHtml(cls)}">${escapeHtml(cls.toUpperCase())}</span></article>`;
+      }
+
+      function marketRegimeMarkup(regime = {}) {
+        const indicators = regime.indicators || [];
+        return `
+          <div class="grid-2">
+            <article class="card">
+              <h3>Market Regime Board</h3>
+              <p class="meta">state: ${escapeHtml(regime.state || "unknown")}</p>
+              <div style="margin-top:0.55rem; display:grid; gap:0.42rem;">
+                ${indicators.map((item) => `<div style="display:flex; justify-content:space-between; align-items:center;"><span class="label">${escapeHtml(item.label)}</span><strong class="tabular">${escapeHtml(item.value)}</strong><span class="status ${escapeHtml(item.status || "neutral")}">${escapeHtml((item.status || "neutral").toUpperCase())}</span></div>`).join("")}
+              </div>
+            </article>
+            <article class="card">
+              <h3>Metadata</h3>
+              <p class="meta">source / as-of / delay_sec / confidence</p>
+              <div style="margin-top:0.55rem; display:grid; gap:0.38rem;">
+                <div><span class="label">Source</span><strong>${escapeHtml(regime.meta?.source || "-")}</strong></div>
+                <div><span class="label">As-of</span><strong>${escapeHtml(regime.meta?.as_of || "-")}</strong></div>
+                <div><span class="label">Delay(sec)</span><strong class="tabular">${escapeHtml(String(regime.meta?.delay_sec ?? "-"))}</strong></div>
+                <div><span class="label">Confidence</span><strong class="tabular">${escapeHtml(formatPercent(regime.meta?.confidence))}</strong></div>
+              </div>
+            </article>
+          </div>
+        `;
+      }
+
+      function holdingsMarkup(holdings, policy) {
+        if (!holdings.length) return `<div class="error">보유 종목 데이터가 없습니다.</div>`;
+        return `
+          <article class="card">
+            <h3>Holdings</h3>
+            <p class="meta">비중 기준: ${escapeHtml(policy.weight_basis || "-")} · 현금 포함: ${policy.include_cash ? "Y" : "N"} · 반올림: ${escapeHtml(policy.rounding_mode || "-")}(${escapeHtml(String(policy.rounding_digits ?? "-"))}자리)</p>
+            <div class="table-wrap" style="margin-top:0.58rem;">
+              <table>
+                <thead><tr><th>Symbol</th><th>Market Value</th><th>Weight %</th><th>Return %</th><th>Daily %</th><th>Status</th></tr></thead>
+                <tbody>
+                  ${holdings.map((row) => `
+                    <tr>
+                      <td>${escapeHtml(row.name || row.symbol)}</td>
+                      <td class="tabular">${escapeHtml(row.market_value_formatted || "-")}</td>
+                      <td class="tabular">${escapeHtml(row.weight_formatted || "-")}</td>
+                      <td class="tabular">${escapeHtml(row.return_formatted || "-")}</td>
+                      <td class="tabular">${escapeHtml(row.daily_change_formatted || "-")}</td>
+                      <td><span class="status ${escapeHtml(trend(row.return_pct))}">${escapeHtml(trend(row.return_pct).toUpperCase())}</span></td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+            <p class="meta" style="margin-top:0.45rem;">총합 비중: <strong class="tabular">${escapeHtml(formatNumber(policy.weight_sum))}%</strong></p>
+          </article>
+        `;
+      }
+
+      function fairValueMarkup(fair) {
+        if (!fair || !fair.rows) return `<div class="error">Fair Value 데이터가 없습니다.</div>`;
+        return `
+          <article class="card">
+            <h3>Fair Value Analysis (5A + 2E)</h3>
+            <p class="meta">공식: ${escapeHtml(fair.policy?.formula || "-")}</p>
+            <p class="meta">source: ${escapeHtml(fair.meta?.source || "-")} · as-of: ${escapeHtml(fair.meta?.as_of || "-")} · delay: ${escapeHtml(String(fair.meta?.delay_sec ?? "-"))} sec · confidence: ${escapeHtml(formatPercent(fair.meta?.confidence))}</p>
+            <div class="table-wrap" style="margin-top:0.58rem;">
+              <table>
+                <thead><tr><th>Period</th><th>Type</th><th>Revenue</th><th>EPS</th><th>PER</th><th>ROE</th><th>Current</th><th>Fair</th><th>Disparity%</th><th>Signal</th></tr></thead>
+                <tbody>
+                  ${fair.rows.map((row) => `
+                    <tr class="${row.kind === "E" ? "estimate-col" : ""}">
+                      <td>${escapeHtml(row.period)}</td>
+                      <td>${escapeHtml(row.kind)}</td>
+                      <td class="tabular">${escapeHtml(row.revenue)}</td>
+                      <td class="tabular">${escapeHtml(row.eps)}</td>
+                      <td class="tabular">${escapeHtml(row.per)}</td>
+                      <td class="tabular">${escapeHtml(row.roe)}</td>
+                      <td class="tabular">${escapeHtml(row.current_price)}</td>
+                      <td class="tabular">${escapeHtml(row.fair_value)}</td>
+                      <td class="tabular">${escapeHtml(row.disparity_pct)}</td>
+                      <td><span class="status ${escapeHtml(trend(parseMetric(row.disparity_pct)))}">${escapeHtml(String(row.signal).toUpperCase())}</span></td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        `;
+      }
+
+      function riskMarkup(risk) {
+        const metrics = risk.metrics || {};
+        const alerts = risk.alerts || [];
+        const selected = alerts.find((item) => item.id === selectedAlertId) || alerts[0];
+        if (selected) selectedAlertId = selected.id;
+        return `
+          <div class="grid-2">
+            <article class="card">
+              <h3>Risk Monitor</h3>
+              <p class="meta">source: ${escapeHtml(risk.meta?.source || "-")} · as-of: ${escapeHtml(risk.meta?.as_of || "-")} · delay: ${escapeHtml(String(risk.meta?.delay_sec ?? "-"))} sec · confidence: ${escapeHtml(formatPercent(risk.meta?.confidence))}</p>
+              <div style="margin-top:0.6rem; display:grid; gap:0.4rem;">
+                ${Object.entries(metrics).map(([name, item]) => `<div style="display:flex; justify-content:space-between; align-items:center;"><span class="label">${escapeHtml(name)}</span><strong class="tabular">${escapeHtml(item.formatted || formatNumber(item.value))}%</strong><span class="status ${escapeHtml(item.status || "neutral")}">${escapeHtml(String(item.status || "neutral").toUpperCase())}</span></div>`).join("")}
+              </div>
+              <h3 style="margin-top:0.76rem;">Alerts</h3>
+              <div class="alert-list" style="margin-top:0.4rem;">
+                ${alerts.map((item) => `<div class="alert-item ${selected && selected.id === item.id ? "active" : ""}" data-alert-id="${escapeHtml(item.id)}"><div style="display:flex; justify-content:space-between;"><strong>${escapeHtml(item.title)}</strong><span class="status ${escapeHtml(item.severity === "high" ? "risk" : item.severity === "medium" ? "down" : "neutral")}">${escapeHtml(item.severity.toUpperCase())}</span></div><p class="meta">${escapeHtml(item.summary)}</p></div>`).join("") || `<div class="meta">활성 경고 없음</div>`}
+              </div>
+            </article>
+            <article class="card">
+              <h3>Risk Drill-down</h3>
+              ${selected ? `
+                <p class="meta">${escapeHtml(selected.summary)}</p>
+                <div style="margin-top:0.48rem;"><span class="label">원인 팩터</span><ul>${(selected.factors || []).map((factor) => `<li class="meta">${escapeHtml(factor)}</li>`).join("")}</ul></div>
+                <div style="margin-top:0.48rem;"><span class="label">기여종목 Top N</span><ul>${(selected.contributors || []).map((item) => `<li class="meta">${escapeHtml(item.symbol)} / ${escapeHtml(formatNumber(item.weight_percent))}%</li>`).join("") || "<li class='meta'>-</li>"}</ul></div>
+                <div style="margin-top:0.48rem;"><span class="label">영향도</span><p class="meta">${escapeHtml(selected.impact || "-")}</p></div>
+                <div style="margin-top:0.48rem;"><span class="label">권장 액션</span><ul>${(selected.actions || []).map((action) => `<li class="meta">${escapeHtml(action)}</li>`).join("")}</ul></div>
+              ` : `<p class="meta">선택된 경고가 없습니다.</p>`}
+            </article>
+          </div>
+        `;
+      }
+
+      function performanceMarkup(perf) {
+        const months = perf.months || [];
+        const series = perf.series || [];
+        if (!months.length || !series.length) return `<div class="error">성과 데이터가 없습니다.</div>`;
+        return `<article class="card"><h3>Portfolio Performance</h3><p class="meta">시리즈별 색상/패턴(실선/점선) 적용</p><div class="chart-box" style="margin-top:0.55rem;">${chartSvg(months, series)}</div></article>`;
+      }
+
+      function chartSvg(months, series) {
+        const width = 980;
+        const height = 280;
+        const pad = 40;
+        const values = series.flatMap((item) => item.values || []);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = Math.max(1, max - min);
+        const xStep = (width - pad * 2) / Math.max(1, months.length - 1);
+        const y = (value) => height - pad - ((value - min) / range) * (height - pad * 2);
+        const lines = series.map((item, idx) => {
+          const points = (item.values || []).map((value, i) => `${pad + i * xStep},${y(value)}`).join(" ");
+          const color = idx === 0 ? "#1f4f92" : "#6f7f95";
+          const dash = item.pattern === "dashed" ? "6 6" : "none";
+          return `<polyline fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${dash}" points="${points}" />`;
+        }).join("");
+        const labels = months.map((month, i) => `<text x="${pad + i * xStep}" y="${height - 10}" text-anchor="middle" fill="#7488a3" font-size="11">${escapeHtml(month)}</text>`).join("");
+        return `<svg viewBox="0 0 ${width} ${height}" width="100%" height="280">${lines}${labels}</svg>`;
+      }
+
+      function trend(value) {
+        if (value === null || value === undefined || Number.isNaN(Number(value))) return "neutral";
+        if (Number(value) > 0) return "up";
+        if (Number(value) < 0) return "down";
+        return "neutral";
+      }
+
+      function confidenceTrend(value) {
+        if (value === null || value === undefined) return "neutral";
+        if (value >= 0.85) return "up";
+        if (value >= 0.65) return "neutral";
+        return "risk";
+      }
+
+      function formatNumber(value) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return "-";
+        return num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      function formatPercent(value) {
+        if (value === null || value === undefined) return "-";
+        return `${formatNumber(Number(value) * 100)}%`;
+      }
+
+      function parseMetric(value) {
+        if (value === null || value === undefined) return NaN;
+        return Number(String(value).replaceAll(",", ""));
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+    </script>
+  </body>
+</html>
