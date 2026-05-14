@@ -379,9 +379,13 @@
         const meta = display.meta || {};
         const fair = display.fair_value || {};
         const diagnostics = snapshot.diagnostics || [];
+        const missing = display.missing_summary || {};
+        const missingItems = (missing.items || []).map((item) => `${item.year || "current"} ${item.label || item.field}`).join(", ");
         output.innerHTML = `
           ${warning ? `<div class="banner">${escapeHtml(warning)}</div>` : ""}
           ${diagnostics.length ? `<div class="banner">외부 데이터 취득 실패: ${diagnostics.map(escapeHtml).join(" | ")}</div>` : ""}
+          ${(missing.count || 0) > 0 ? `<div class="banner">${escapeHtml(missing.message || `결측 ${missing.count}건`)}</div>` : ""}
+          ${(missing.count || 0) > 0 ? `<div class="meta" style="margin-bottom:0.45rem;">누락 항목 예시: ${escapeHtml(missingItems || "-")}</div>` : ""}
           <div class="kpi-grid">
             ${kpi("Ticker", snapshot.security.ticker, "neutral")}
             ${kpi("Current", `${fair.current_price_formatted || "-"} ${snapshot.quote?.currency || ""}`, trend(fair.disparity_pct))}
@@ -474,6 +478,7 @@
           <article class="card">
             <h3>Fair Value Analysis (5A + 2E)</h3>
             <p class="meta">공식: ${escapeHtml(fair.policy?.formula || "-")}</p>
+            <p class="meta">source: ${escapeHtml(fair.meta?.source || "-")} · as-of: ${escapeHtml(fair.meta?.as_of || "-")} · delay: ${escapeHtml(String(fair.meta?.delay_sec ?? "-"))} sec · confidence: ${escapeHtml(formatPercent(fair.meta?.confidence))}</p>
             <div class="table-wrap" style="margin-top:0.58rem;">
               <table>
                 <thead><tr><th>Period</th><th>Type</th><th>Revenue</th><th>EPS</th><th>PER</th><th>ROE</th><th>Current</th><th>Fair</th><th>Disparity%</th><th>Signal</th></tr></thead>
@@ -508,8 +513,9 @@
           <div class="grid-2">
             <article class="card">
               <h3>Risk Monitor</h3>
+              <p class="meta">source: ${escapeHtml(risk.meta?.source || "-")} · as-of: ${escapeHtml(risk.meta?.as_of || "-")} · delay: ${escapeHtml(String(risk.meta?.delay_sec ?? "-"))} sec · confidence: ${escapeHtml(formatPercent(risk.meta?.confidence))}</p>
               <div style="margin-top:0.6rem; display:grid; gap:0.4rem;">
-                ${Object.entries(metrics).map(([name, item]) => `<div style="display:flex; justify-content:space-between; align-items:center;"><span class="label">${escapeHtml(name)}</span><strong class="tabular">${escapeHtml(formatNumber(item.value))}%</strong><span class="status ${escapeHtml(item.status || "neutral")}">${escapeHtml(String(item.status || "neutral").toUpperCase())}</span></div>`).join("")}
+                ${Object.entries(metrics).map(([name, item]) => `<div style="display:flex; justify-content:space-between; align-items:center;"><span class="label">${escapeHtml(name)}</span><strong class="tabular">${escapeHtml(item.formatted || formatNumber(item.value))}%</strong><span class="status ${escapeHtml(item.status || "neutral")}">${escapeHtml(String(item.status || "neutral").toUpperCase())}</span></div>`).join("")}
               </div>
               <h3 style="margin-top:0.76rem;">Alerts</h3>
               <div class="alert-list" style="margin-top:0.4rem;">

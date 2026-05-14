@@ -57,7 +57,7 @@ def build_display_snapshot(
         include_cash=include_cash,
         cash_value=cash_value,
     )
-    risk = _risk_section(fair_value, holdings, fill_template)
+    risk = _risk_section(snapshot, fair_value, holdings, fill_template)
     regime = _market_regime_section(snapshot, fair_value, risk)
     performance = _performance_section(fair_value)
     meta = _snapshot_meta(snapshot)
@@ -86,6 +86,7 @@ def build_display_snapshot(
         "risk": risk,
         "market_regime": regime,
         "portfolio_performance": performance,
+        "missing_summary": _missing_summary(fill_template),
         "notes": _notes(security, units),
     }
 
@@ -516,6 +517,7 @@ def _holdings_section(
 
 
 def _risk_section(
+    snapshot: ValuationSnapshot,
     fair_value: dict[str, Any],
     holdings: list[dict[str, Any]],
     missing_fields: list[dict[str, Any]],
@@ -579,16 +581,26 @@ def _risk_section(
             }
         )
 
+    metrics = {
+        "var95": {"value": var95, "status": _risk_status(var95, high=20, medium=12)},
+        "volatility": {"value": volatility, "status": _risk_status(volatility, high=35, medium=20)},
+        "concentration": {"value": concentration, "status": _risk_status(concentration, high=35, medium=20)},
+        "liquidity_cover": {"value": liquidity_cover, "status": _risk_status(100 - liquidity_cover, high=70, medium=45)},
+        "data_gap_score": {"value": missing_score, "status": _risk_status(missing_score, high=45, medium=20)},
+    }
+    for item in metrics.values():
+        item["formatted"] = format_display_number(item["value"])
+
     return {
-        "metrics": {
-            "var95": {"value": var95, "status": _risk_status(var95, high=20, medium=12)},
-            "volatility": {"value": volatility, "status": _risk_status(volatility, high=35, medium=20)},
-            "concentration": {"value": concentration, "status": _risk_status(concentration, high=35, medium=20)},
-            "liquidity_cover": {"value": liquidity_cover, "status": _risk_status(100 - liquidity_cover, high=70, medium=45)},
-            "data_gap_score": {"value": missing_score, "status": _risk_status(missing_score, high=45, medium=20)},
-        },
+        "metrics": metrics,
         "alerts": alerts,
         "selected_alert_id": alerts[0]["id"] if alerts else None,
+        "meta": _provider_meta(
+            source=snapshot.quote.source if snapshot.quote else (snapshot.valuation.source if snapshot.valuation else None),
+            as_of=snapshot.quote.as_of if snapshot.quote else (snapshot.valuation.as_of if snapshot.valuation else None),
+            is_fallback=bool(snapshot.quote.is_fallback) if snapshot.quote else bool(snapshot.valuation.is_fallback) if snapshot.valuation else True,
+            diagnostics_count=len(snapshot.diagnostics),
+        ),
     }
 
 
@@ -609,8 +621,8 @@ def _risk_status(value: float, *, high: float, medium: float) -> str:
     if value >= high:
         return "risk"
     if value >= medium:
-        return "warn"
-    return "stable"
+        return "down"
+    return "neutral"
 
 
 def _market_regime_section(
@@ -683,3 +695,23 @@ def _valuation_signal(disparity: float | None) -> str:
     if disparity <= -15:
         return "trim"
     return "hold"
+
+
+def _missing_summary(fills: list[dict[str, Any]]) -> dict[str, Any]:
+    if not fills:
+        return {"count": 0, "items": (), "message": "결측 데이터가 없습니다."}
+    items = tuple(
+        {
+            "scope": item.get("scope"),
+            "year": item.get("year"),
+            "field": item.get("field"),
+            "label": item.get("label"),
+            "unit": item.get("input_unit"),
+        }
+        for item in fills[:8]
+    )
+    return {
+        "count": len(fills),
+        "items": items,
+        "message": f"결측 필드 {len(fills)}건이 있어 일부 지표는 추정/보정이 필요합니다.",
+    }

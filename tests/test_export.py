@@ -19,14 +19,26 @@ class ExportTests(unittest.TestCase):
                 "current_price_formatted": "100.00",
                 "fair_value_formatted": "120.00",
                 "disparity_pct_formatted": "20.00",
+                "meta": {
+                    "source": "valuation-engine",
+                    "as_of": "2026-05-14T05:00:01+00:00",
+                    "delay_sec": 11,
+                    "confidence": 0.9,
+                },
             },
             "holdings": [
                 {"symbol": "AAA", "weight_formatted": "40.00"},
                 {"symbol": "BBB", "weight_formatted": "60.00"},
             ],
             "risk": {
+                "meta": {
+                    "source": "risk-engine",
+                    "as_of": "2026-05-14T05:00:02+00:00",
+                    "delay_sec": 10,
+                    "confidence": 0.86,
+                },
                 "metrics": {
-                    "var95": {"value": 8.0},
+                    "var95": {"value": 8.0, "formatted": "8.00"},
                     "volatility": {"value": 11.0},
                 }
             },
@@ -37,6 +49,8 @@ class ExportTests(unittest.TestCase):
         self.assertIn("fair_value,disparity_pct,20.00,%", csv_text)
         self.assertIn("holdings,AAA,40.00,%", csv_text)
         self.assertIn("risk,var95,8.00,%", csv_text)
+        self.assertIn("valuation-engine", csv_text)
+        self.assertIn("risk-engine", csv_text)
 
 
 if __name__ == "__main__":

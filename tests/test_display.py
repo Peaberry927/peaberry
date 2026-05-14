@@ -133,6 +133,11 @@ class DisplaySnapshotTests(unittest.TestCase):
             item for item in display["missing_fields"] if item["field"] == "revenue"
         )
         self.assertEqual(revenue_fill["input_unit"], "USD mn")
+        self.assertGreater(display["missing_summary"]["count"], 0)
+        self.assertTrue(display["missing_summary"]["items"])
+        self.assertIn("meta", display["fair_value"])
+        self.assertIn("meta", display["risk"])
+        self.assertIn("formatted", display["risk"]["metrics"]["var95"])
 
 
 if __name__ == "__main__":

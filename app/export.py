@@ -28,16 +28,21 @@ def snapshot_export_csv(display: dict[str, Any]) -> str:
     confidence = meta.get("confidence")
 
     fair = display.get("fair_value", {})
+    fair_meta = fair.get("meta") or meta
+    fair_source = fair_meta.get("source")
+    fair_as_of = fair_meta.get("as_of")
+    fair_delay_sec = fair_meta.get("delay_sec")
+    fair_confidence = fair_meta.get("confidence")
     writer.writerow(
         [
             "fair_value",
             "current_price",
             fair.get("current_price_formatted"),
             display.get("units", {}).get("per_share", {}).get("display", ""),
-            source,
-            as_of,
-            delay_sec,
-            confidence,
+            fair_source,
+            fair_as_of,
+            fair_delay_sec,
+            fair_confidence,
         ]
     )
     writer.writerow(
@@ -46,10 +51,10 @@ def snapshot_export_csv(display: dict[str, Any]) -> str:
             "fair_value",
             fair.get("fair_value_formatted"),
             display.get("units", {}).get("per_share", {}).get("display", ""),
-            source,
-            as_of,
-            delay_sec,
-            confidence,
+            fair_source,
+            fair_as_of,
+            fair_delay_sec,
+            fair_confidence,
         ]
     )
     writer.writerow(
@@ -58,10 +63,10 @@ def snapshot_export_csv(display: dict[str, Any]) -> str:
             "disparity_pct",
             fair.get("disparity_pct_formatted"),
             "%",
-            source,
-            as_of,
-            delay_sec,
-            confidence,
+            fair_source,
+            fair_as_of,
+            fair_delay_sec,
+            fair_confidence,
         ]
     )
 
@@ -78,17 +83,23 @@ def snapshot_export_csv(display: dict[str, Any]) -> str:
                 confidence,
             ]
         )
-    for key, item in (display.get("risk", {}).get("metrics", {}) or {}).items():
+    risk = display.get("risk", {}) or {}
+    risk_meta = risk.get("meta") or meta
+    risk_source = risk_meta.get("source")
+    risk_as_of = risk_meta.get("as_of")
+    risk_delay_sec = risk_meta.get("delay_sec")
+    risk_confidence = risk_meta.get("confidence")
+    for key, item in (risk.get("metrics", {}) or {}).items():
         writer.writerow(
             [
                 "risk",
                 key,
-                f"{item.get('value', 0):.2f}",
+                item.get("formatted") or f"{item.get('value', 0):.2f}",
                 "%",
-                source,
-                as_of,
-                delay_sec,
-                confidence,
+                risk_source,
+                risk_as_of,
+                risk_delay_sec,
+                risk_confidence,
             ]
         )
     return output.getvalue()
