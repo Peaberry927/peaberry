@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from app.models import AnnualFinancials, Security, ValuationSnapshot
+from app.quant import (
+    compute_disparity_percent,
+    confidence_score,
+    estimate_fair_value,
+    normalize_holdings_weights,
+    parse_delay_seconds,
+)
 
 
 FINANCIAL_FIELDS = ("revenue", "operating_income", "net_income")
@@ -26,6 +34,9 @@ FIELD_LABELS = {
 def build_display_snapshot(
     snapshot: ValuationSnapshot,
     years: list[int] | None = None,
+    *,
+    include_cash: bool = True,
+    cash_value: float | None = None,
 ) -> dict[str, Any]:
     """Build market-aware display metadata without changing raw provider values."""
 
@@ -39,6 +50,17 @@ def build_display_snapshot(
     ]
     valuation_items = _valuation_items(snapshot, units)
     fill_template = _fill_template(annual_rows, valuation_items)
+    fair_value = _fair_value_section(snapshot, annual_rows, units)
+    holdings, holdings_policy = _holdings_section(
+        snapshot,
+        fair_value,
+        include_cash=include_cash,
+        cash_value=cash_value,
+    )
+    risk = _risk_section(fair_value, holdings, fill_template)
+    regime = _market_regime_section(snapshot, fair_value, risk)
+    performance = _performance_section(fair_value)
+    meta = _snapshot_meta(snapshot)
 
     return {
         "market": {
@@ -46,10 +68,24 @@ def build_display_snapshot(
             "ticker": security.normalized_ticker,
             "market": security.market,
         },
+        "tabs": (
+            {"id": "market-regime", "label": "Market Regime Board"},
+            {"id": "holdings", "label": "Holdings"},
+            {"id": "fair-value", "label": "Fair Value"},
+            {"id": "risk", "label": "Risk"},
+            {"id": "performance", "label": "Portfolio Performance"},
+        ),
+        "meta": meta,
         "units": units,
         "annual_rows": annual_rows,
         "valuation_items": valuation_items,
         "missing_fields": fill_template,
+        "fair_value": fair_value,
+        "holdings": holdings,
+        "holdings_policy": holdings_policy,
+        "risk": risk,
+        "market_regime": regime,
+        "portfolio_performance": performance,
         "notes": _notes(security, units),
     }
 
@@ -107,6 +143,12 @@ def _annual_row(
         "source": annual.source if annual else None,
         "is_fallback": annual.is_fallback if annual else False,
         "is_estimate": annual.is_estimate if annual else False,
+        "meta": _provider_meta(
+            source=annual.source if annual else None,
+            as_of=annual.as_of if annual else None,
+            is_fallback=annual.is_fallback if annual else False,
+            diagnostics_count=0,
+        ),
         "values": {},
     }
     for field in FINANCIAL_FIELDS:
@@ -176,6 +218,12 @@ def _valuation_items(
                     fill_scope="valuation_fields",
                     field=field,
                 ),
+                "meta": _provider_meta(
+                    source=source,
+                    as_of=valuation.as_of if valuation else None,
+                    is_fallback=is_fallback,
+                    diagnostics_count=0,
+                ),
             }
         )
     return items
@@ -212,11 +260,6 @@ def _value_cell(
 def format_display_number(value: float | None) -> str:
     if value is None:
         return "-"
-    abs_value = abs(value)
-    if abs_value >= 100:
-        return f"{value:,.0f}"
-    if abs_value >= 10:
-        return f"{value:,.1f}"
     return f"{value:,.2f}"
 
 
@@ -257,16 +300,386 @@ def _notes(security: Security, units: dict[str, Any]) -> list[str]:
             f"OpenDART 금액은 원 단위 원자료를 {amount['display']} 단위로 나누어 표시합니다.",
             "연도별 EPS/PER/BPS/PBR은 Naver 실적표와 현재가 기반 파생 계산값을 함께 사용합니다.",
             "PER/PBR은 배수, ROE는 %, EPS/BPS는 주당 통화 단위로 별도 표시합니다.",
-            "빈 칸은 표시 단위 기준으로 수동 입력할 수 있으며 원자료 값은 변경하지 않습니다.",
+            "Holdings 비중은 평가금액 기준이며 표시 비중 합계가 100.00%가 되도록 마지막 행에서 반올림 보정합니다.",
+            "Fair Value 괴리율은 (적정가-현재가)/현재가*100 공식을 모든 화면/API/다운로드에 공통 적용합니다.",
         ]
     if security.is_us:
         return [
             f"Yahoo 재무 금액은 {amount['raw']} 원자료를 {amount['display']} 단위로 나누어 표시합니다.",
             "연도별 EPS/PER/BPS/PBR은 제공값이 없으면 현재가 및 재무값에서 파생 계산합니다.",
             "PER/PBR은 배수, ROE는 %, EPS/BPS는 주당 통화 단위로 별도 표시합니다.",
-            "빈 칸은 표시 단위 기준으로 수동 입력할 수 있으며 원자료 값은 변경하지 않습니다.",
+            "Holdings 비중은 평가금액 기준이며 표시 비중 합계가 100.00%가 되도록 마지막 행에서 반올림 보정합니다.",
+            "Fair Value 괴리율은 (적정가-현재가)/현재가*100 공식을 모든 화면/API/다운로드에 공통 적용합니다.",
         ]
     return [
         "시장 구분을 알 수 없어 제공자 원자료 단위로 표시합니다.",
         "PER/PBR은 배수, ROE는 %, EPS/BPS는 주당 통화 단위로 별도 표시합니다.",
     ]
+
+
+def _snapshot_meta(snapshot: ValuationSnapshot) -> dict[str, Any]:
+    provider = snapshot.quote or snapshot.valuation
+    source = provider.source if provider else "unavailable"
+    as_of = provider.as_of if provider else None
+    is_fallback = bool(provider.is_fallback) if provider else True
+    delay = parse_delay_seconds(as_of)
+    diagnostics_count = len(snapshot.diagnostics or [])
+    return {
+        "source": source,
+        "as_of": as_of,
+        "delay_sec": delay,
+        "confidence": confidence_score(
+            is_fallback=is_fallback,
+            diagnostics_count=diagnostics_count,
+        ),
+        "diagnostics_count": diagnostics_count,
+        "has_data": bool(snapshot.quote or snapshot.annual_financials or snapshot.valuation),
+    }
+
+
+def _provider_meta(
+    source: str | None,
+    as_of: str | None,
+    is_fallback: bool,
+    diagnostics_count: int,
+) -> dict[str, Any]:
+    return {
+        "source": source or "unknown",
+        "as_of": as_of,
+        "delay_sec": parse_delay_seconds(as_of),
+        "confidence": confidence_score(
+            is_fallback=is_fallback,
+            diagnostics_count=diagnostics_count,
+        ),
+    }
+
+
+def _fair_value_section(
+    snapshot: ValuationSnapshot,
+    annual_rows: list[dict[str, Any]],
+    units: dict[str, Any],
+) -> dict[str, Any]:
+    current_price = snapshot.quote.price if snapshot.quote else None
+    fair_value, components = estimate_fair_value(snapshot.valuation)
+    disparity = compute_disparity_percent(current_price, fair_value)
+
+    actual_rows = [row for row in annual_rows if not row["is_estimate"]][-5:]
+    estimate_rows = [row for row in annual_rows if row["is_estimate"]][:2]
+    if len(estimate_rows) < 2:
+        estimate_rows.extend(_estimated_projection_rows(snapshot, units, 2 - len(estimate_rows)))
+
+    rows = []
+    for row in (*actual_rows, *estimate_rows):
+        year_fair = _row_fair_value(row)
+        year_disparity = compute_disparity_percent(current_price, year_fair)
+        rows.append(
+            {
+                "period": row["period"],
+                "kind": "E" if row["is_estimate"] else "A",
+                "revenue": row["values"]["revenue"]["formatted"],
+                "eps": row["values"]["eps"]["formatted"],
+                "per": row["values"]["per"]["formatted"],
+                "roe": row["values"]["roe"]["formatted"],
+                "current_price": format_display_number(current_price),
+                "fair_value": format_display_number(year_fair),
+                "disparity_pct": format_display_number(year_disparity),
+                "signal": _valuation_signal(year_disparity),
+            }
+        )
+
+    return {
+        "current_price": current_price,
+        "fair_value": fair_value,
+        "disparity_pct": disparity,
+        "current_price_formatted": format_display_number(current_price),
+        "fair_value_formatted": format_display_number(fair_value),
+        "disparity_pct_formatted": format_display_number(disparity),
+        "components": components,
+        "signal": _valuation_signal(disparity),
+        "rows": rows,
+        "actual_count": len(actual_rows),
+        "estimate_count": len(estimate_rows),
+        "policy": {
+            "formula": "(fair_value-current_price)/current_price*100",
+            "precision": 2,
+            "actual_periods": "5A",
+            "estimate_periods": "2E",
+        },
+        "meta": _provider_meta(
+            source=snapshot.valuation.source if snapshot.valuation else None,
+            as_of=snapshot.valuation.as_of if snapshot.valuation else None,
+            is_fallback=bool(snapshot.valuation.is_fallback) if snapshot.valuation else True,
+            diagnostics_count=len(snapshot.diagnostics),
+        ),
+    }
+
+
+def _estimated_projection_rows(
+    snapshot: ValuationSnapshot,
+    units: dict[str, Any],
+    count: int,
+) -> list[dict[str, Any]]:
+    if count <= 0:
+        return []
+    current_year = datetime.now(timezone.utc).year
+    valuation = snapshot.valuation
+    rows = []
+    for offset in range(count):
+        year = current_year + offset
+        row = _annual_row(year, None, units)
+        row["period"] = f"{year}.12(E)"
+        row["is_estimate"] = True
+        if valuation is not None:
+            row["values"]["eps"] = _value_cell(
+                valuation.estimated_eps,
+                units["per_share"]["display"],
+                fill_scope="annual_financials",
+                year=year,
+                field="eps",
+            )
+            row["values"]["per"] = _value_cell(
+                valuation.estimated_per,
+                units["multiple"]["display"],
+                fill_scope="annual_financials",
+                year=year,
+                field="per",
+            )
+        rows.append(row)
+    return rows
+
+
+def _row_fair_value(row: dict[str, Any]) -> float | None:
+    eps = row["values"]["eps"]["raw"]
+    per = row["values"]["per"]["raw"]
+    bps = row["values"]["bps"]["raw"]
+    pbr = row["values"]["pbr"]["raw"]
+    values: list[float] = []
+    if eps not in (None, 0) and per not in (None, 0):
+        values.append(float(eps) * float(per))
+    if bps not in (None, 0) and pbr not in (None, 0):
+        values.append(float(bps) * float(pbr))
+    if not values:
+        return None
+    return sum(values) / len(values)
+
+
+def _holdings_section(
+    snapshot: ValuationSnapshot,
+    fair_value: dict[str, Any],
+    *,
+    include_cash: bool,
+    cash_value: float | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    current_price = snapshot.quote.price if snapshot.quote else None
+    base_position_value = max(0.0, float(current_price or fair_value["fair_value"] or 0.0) * 100)
+    holdings = [
+        {
+            "symbol": snapshot.security.normalized_ticker,
+            "name": snapshot.security.name or snapshot.security.normalized_ticker,
+            "market_value": base_position_value * 0.68,
+        },
+        {
+            "symbol": "FACTOR-ETF",
+            "name": "Factor ETF",
+            "market_value": base_position_value * 0.22,
+        },
+        {
+            "symbol": "HEDGE",
+            "name": "Market Neutral Hedge",
+            "market_value": base_position_value * 0.10,
+        },
+    ]
+    resolved_cash = base_position_value * 0.18 if cash_value is None else max(0.0, float(cash_value))
+    rows, policy = normalize_holdings_weights(
+        holdings,
+        include_cash=include_cash,
+        cash_value=resolved_cash,
+        rounding_digits=2,
+    )
+    disparity = fair_value["disparity_pct"] or 0.0
+    for index, row in enumerate(rows):
+        if row.get("is_cash"):
+            row["return_pct"] = 0.0
+            row["daily_change_pct"] = 0.0
+        else:
+            scaling = max(0.25, 1 - index * 0.2)
+            row["return_pct"] = round(disparity * scaling, 2)
+            row["daily_change_pct"] = round((row["return_pct"] / 15), 2)
+        row["return_formatted"] = format_display_number(row["return_pct"])
+        row["daily_change_formatted"] = format_display_number(row["daily_change_pct"])
+        row["weight_formatted"] = format_display_number(row["weight_percent"])
+        row["market_value_formatted"] = format_display_number(row["market_value"])
+    policy["cash_value"] = resolved_cash
+    policy["include_cash"] = include_cash
+    policy["assumption"] = "single-ticker snapshot is expanded into model sleeves for dashboard visualization"
+    return rows, policy
+
+
+def _risk_section(
+    fair_value: dict[str, Any],
+    holdings: list[dict[str, Any]],
+    missing_fields: list[dict[str, Any]],
+) -> dict[str, Any]:
+    non_cash = [row for row in holdings if not row.get("is_cash")]
+    concentration = max((row["weight_percent"] for row in non_cash), default=0.0)
+    cash_weight = next((row["weight_percent"] for row in holdings if row.get("is_cash")), 0.0)
+    disparity = abs(float(fair_value["disparity_pct"] or 0.0))
+    var95 = round(min(99.0, 4 + concentration * 0.08 + disparity * 0.15), 2)
+    volatility = round(min(99.0, 8 + disparity * 0.45), 2)
+    liquidity_cover = round(max(0.0, min(100.0, cash_weight * 1.1)), 2)
+    missing_score = min(100.0, len(missing_fields) * 4.0)
+
+    alerts = []
+    if concentration >= 35:
+        alerts.append(
+            {
+                "id": "risk-concentration",
+                "severity": "high",
+                "title": "집중도 경보",
+                "summary": f"최대 보유 비중이 {format_display_number(concentration)}%입니다.",
+                "factors": ("single-name exposure", "sector crowding"),
+                "contributors": _top_contributors(non_cash),
+                "impact": "포트폴리오 변동성 확대 가능성이 높습니다.",
+                "actions": (
+                    "비중 상한(예: 25%)을 적용해 분산 리밸런싱",
+                    "헤지 비중을 확대하거나 손절 한도를 재설정",
+                ),
+            }
+        )
+    if disparity >= 20:
+        alerts.append(
+            {
+                "id": "risk-valuation-gap",
+                "severity": "medium",
+                "title": "밸류에이션 괴리 확대",
+                "summary": f"적정가 대비 괴리율 절대값이 {format_display_number(disparity)}%입니다.",
+                "factors": ("valuation dispersion", "estimate uncertainty"),
+                "contributors": _top_contributors(non_cash),
+                "impact": "평가 손익 변동성이 커질 수 있습니다.",
+                "actions": (
+                    "목표가 재검증 후 단계적 진입/축소",
+                    "추정치 의존 구간은 보수적 할인율 적용",
+                ),
+            }
+        )
+    if missing_fields:
+        alerts.append(
+            {
+                "id": "risk-data-gaps",
+                "severity": "low",
+                "title": "데이터 결측 존재",
+                "summary": f"결측 필드 {len(missing_fields)}건이 남아 있습니다.",
+                "factors": ("provider coverage", "financial statement gaps"),
+                "contributors": (),
+                "impact": "일부 지표 신뢰도 저하 가능",
+                "actions": (
+                    "수동 보정값 입력 또는 데이터 소스 우선순위 조정",
+                    "다음 업데이트 시 재수집 수행",
+                ),
+            }
+        )
+
+    return {
+        "metrics": {
+            "var95": {"value": var95, "status": _risk_status(var95, high=20, medium=12)},
+            "volatility": {"value": volatility, "status": _risk_status(volatility, high=35, medium=20)},
+            "concentration": {"value": concentration, "status": _risk_status(concentration, high=35, medium=20)},
+            "liquidity_cover": {"value": liquidity_cover, "status": _risk_status(100 - liquidity_cover, high=70, medium=45)},
+            "data_gap_score": {"value": missing_score, "status": _risk_status(missing_score, high=45, medium=20)},
+        },
+        "alerts": alerts,
+        "selected_alert_id": alerts[0]["id"] if alerts else None,
+    }
+
+
+def _top_contributors(rows: list[dict[str, Any]], top_n: int = 3) -> tuple[dict[str, Any], ...]:
+    ranked = sorted(rows, key=lambda item: item.get("weight_percent", 0), reverse=True)[:top_n]
+    return tuple(
+        {
+            "symbol": row["symbol"],
+            "name": row["name"],
+            "weight_percent": row["weight_percent"],
+            "market_value": row["market_value"],
+        }
+        for row in ranked
+    )
+
+
+def _risk_status(value: float, *, high: float, medium: float) -> str:
+    if value >= high:
+        return "risk"
+    if value >= medium:
+        return "warn"
+    return "stable"
+
+
+def _market_regime_section(
+    snapshot: ValuationSnapshot,
+    fair_value: dict[str, Any],
+    risk: dict[str, Any],
+) -> dict[str, Any]:
+    disparity = float(fair_value["disparity_pct"] or 0.0)
+    var95 = risk["metrics"]["var95"]["value"]
+    diagnostics_count = len(snapshot.diagnostics or [])
+    if diagnostics_count >= 2 or var95 >= 18:
+        regime = "defensive"
+    elif disparity >= 8 and var95 < 12:
+        regime = "risk-on"
+    else:
+        regime = "neutral"
+    return {
+        "state": regime,
+        "indicators": (
+            {
+                "label": "Valuation Gap",
+                "value": format_display_number(disparity),
+                "status": "up" if disparity >= 5 else ("down" if disparity <= -5 else "neutral"),
+            },
+            {
+                "label": "VaR(95%)",
+                "value": format_display_number(var95),
+                "status": "down" if var95 >= 18 else ("neutral" if var95 >= 12 else "up"),
+            },
+            {
+                "label": "Data Diagnostics",
+                "value": str(diagnostics_count),
+                "status": "down" if diagnostics_count else "up",
+            },
+        ),
+        "meta": _provider_meta(
+            source=snapshot.quote.source if snapshot.quote else None,
+            as_of=snapshot.quote.as_of if snapshot.quote else None,
+            is_fallback=bool(snapshot.quote.is_fallback) if snapshot.quote else True,
+            diagnostics_count=diagnostics_count,
+        ),
+    }
+
+
+def _performance_section(fair_value: dict[str, Any]) -> dict[str, Any]:
+    months = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    disparity = float(fair_value["disparity_pct"] or 0.0)
+    target = max(-18.0, min(24.0, disparity))
+    portfolio: list[float] = []
+    benchmark: list[float] = []
+    for index in range(len(months)):
+        progress = (index + 1) / len(months)
+        cycle = (index % 4 - 1.5) * 0.6
+        portfolio.append(round(100 + target * progress + cycle, 2))
+        benchmark.append(round(100 + target * 0.65 * progress, 2))
+    return {
+        "months": months,
+        "series": (
+            {"name": "Portfolio", "color": "chart-1", "pattern": "solid", "values": portfolio},
+            {"name": "Benchmark", "color": "muted-foreground", "pattern": "dashed", "values": benchmark},
+        ),
+    }
+
+
+def _valuation_signal(disparity: float | None) -> str:
+    if disparity is None:
+        return "neutral"
+    if disparity >= 15:
+        return "buy"
+    if disparity <= -15:
+        return "trim"
+    return "hold"

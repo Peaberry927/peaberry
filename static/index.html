@@ -3,21 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Peaberry Quant Data</title>
+    <title>Peaberry Quant Dashboard</title>
     <style>
       :root {
-        color-scheme: dark;
-        --bg: #091326;
-        --panel: #10213a;
-        --panel-soft: #172c4b;
-        --line: #2b4468;
-        --line-soft: rgba(143, 176, 217, 0.2);
-        --text: #eef6ff;
-        --muted: #9bb8de;
-        --accent: #78c6ff;
-        --good: #45d483;
-        --warn: #f9c25a;
-        --bad: #ff6b85;
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --line: #d8e2ef;
+        --line-strong: #c6d4e7;
+        --text: #12253a;
+        --muted: #5f7088;
+        --navy: #1f4f92;
+        --up: #18995b;
+        --down: #d43a4e;
+        --neutral: #6f7f95;
+        --risk: #be6800;
       }
 
       * {
@@ -25,36 +24,46 @@
       }
 
       body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: radial-gradient(circle at top, #122847 0%, var(--bg) 34%);
-        color: var(--text);
         margin: 0;
-        padding: 2rem;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
       main {
         margin: 0 auto;
-        max-width: 1180px;
+        max-width: 1360px;
+        padding: 1.2rem;
       }
 
-      h1 {
-        font-size: 1.65rem;
-        margin: 0 0 0.25rem;
-      }
-
+      h1,
+      h2,
+      h3,
       p {
-        color: var(--muted);
         margin: 0;
       }
 
-      form,
-      .panel {
-        background: linear-gradient(180deg, var(--panel), #0f1f36);
+      .surface {
         border: 1px solid var(--line);
-        border-radius: 18px;
-        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
-        margin-top: 1rem;
-        padding: 1.1rem;
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: 0 6px 24px rgba(16, 35, 65, 0.06);
+        padding: 1rem;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      form {
+        margin-top: 0.75rem;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 0.7fr 0.9fr 0.9fr 1fr auto;
+        gap: 0.5rem;
       }
 
       input,
@@ -63,289 +72,212 @@
       }
 
       input {
-        background: #0a1528;
-        border: 1px solid var(--line);
+        padding: 0.62rem 0.72rem;
+        border: 1px solid var(--line-strong);
         border-radius: 10px;
-        color: var(--text);
-        padding: 0.7rem 0.75rem;
-        width: 100%;
       }
 
       button {
-        background: linear-gradient(180deg, #2d679d, #24527d);
         border: 0;
         border-radius: 999px;
-        color: white;
+        padding: 0.62rem 0.95rem;
         cursor: pointer;
+        color: #fff;
         font-weight: 700;
-        padding: 0.75rem 1rem;
+        background: var(--navy);
       }
 
       button.secondary {
-        background: #314866;
+        background: #496284;
       }
 
-      .form-grid {
+      .panel {
+        margin-top: 1rem;
+      }
+
+      .kpi-grid {
         display: grid;
-        gap: 0.65rem;
-        grid-template-columns: 1.1fr 0.8fr 1fr 1.1fr 1.4fr auto;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 0.6rem;
       }
 
-      .dashboard {
-        display: grid;
-        gap: 1rem;
-      }
-
-      .kpi-grid,
-      .valuation-grid,
-      .unit-grid,
-      .meta-grid {
-        display: grid;
-        gap: 0.7rem;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      }
-
-      .content-grid {
-        display: grid;
-        gap: 0.95rem;
-        grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
-      }
-
-      .surface,
-      .card,
-      .unit-card {
-        background: linear-gradient(180deg, var(--panel-soft), #132844);
-        border: 1px solid var(--line-soft);
-        border-radius: 16px;
-        padding: 0.85rem;
-      }
-
-      .surface {
-        padding: 1rem;
-      }
-
-      .section-head {
-        align-items: center;
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 0.7rem;
-      }
-
-      .section-head h2,
-      .section-head h3 {
-        font-size: 0.98rem;
-        letter-spacing: 0.01em;
-        margin: 0;
-      }
-
-      .section-head p {
-        color: var(--muted);
-        font-size: 0.8rem;
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 0.8rem;
       }
 
       .label {
-        color: var(--muted);
         display: block;
-        font-size: 0.82rem;
-        margin-bottom: 0.25rem;
-      }
-
-      .value {
-        font-size: 1.2rem;
-        font-weight: 800;
-      }
-
-      .kpi-grid .card {
-        background: linear-gradient(180deg, #1a3355, #132944);
-        min-height: 82px;
-      }
-
-      .kpi-grid .label {
+        color: var(--muted);
         font-size: 0.78rem;
       }
 
-      .kpi-grid .value {
-        font-size: 1.25rem;
+      .value {
+        display: block;
+        margin-top: 0.28rem;
+        font-size: 1.26rem;
+        font-weight: 800;
       }
 
-      .unit {
-        color: var(--muted);
-        font-size: 0.8rem;
-        margin-left: 0.25rem;
-      }
-
-      .status-pill {
-        border-radius: 999px;
-        border: 1px solid var(--line);
-        color: var(--muted);
+      .status {
         display: inline-flex;
-        font-size: 0.74rem;
+        margin-top: 0.45rem;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-size: 0.73rem;
         font-weight: 700;
-        gap: 0.35rem;
-        padding: 0.22rem 0.56rem;
+        padding: 0.16rem 0.52rem;
       }
 
-      .status-pill.good {
-        border-color: rgba(69, 212, 131, 0.45);
-        color: var(--good);
+      .status.up {
+        color: var(--up);
+        border-color: rgba(24, 153, 91, 0.35);
       }
 
-      .status-pill.warn {
-        border-color: rgba(249, 194, 90, 0.45);
-        color: var(--warn);
+      .status.down {
+        color: var(--down);
+        border-color: rgba(212, 58, 78, 0.35);
       }
 
-      .status-pill.bad {
-        border-color: rgba(255, 107, 133, 0.45);
-        color: var(--bad);
+      .status.neutral {
+        color: var(--neutral);
       }
 
-      .diagnostics {
-        background: linear-gradient(180deg, #162941, #102239);
-        border: 1px solid rgba(255, 107, 133, 0.35);
-        border-radius: 14px;
-        padding: 0.75rem;
+      .status.risk {
+        color: var(--risk);
+        border-color: rgba(190, 104, 0, 0.38);
       }
 
-      .diagnostics ul {
-        margin: 0.4rem 0 0;
-        padding-left: 1.15rem;
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.42rem;
+        margin-top: 0.75rem;
       }
 
-      .diagnostics li {
-        color: #ffbfd0;
-        font-size: 0.85rem;
-        line-height: 1.5;
+      .tab-btn {
+        border: 1px solid #d4dff0;
+        background: #ebf1fb;
+        color: #223f64;
+      }
+
+      .tab-btn.active {
+        background: var(--navy);
+        color: #fff;
+      }
+
+      .tab-content {
+        display: none;
+        margin-top: 0.7rem;
+      }
+
+      .tab-content.active {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1.85fr 1fr;
+        gap: 0.65rem;
       }
 
       .table-wrap {
-        border: 1px solid var(--line-soft);
-        border-radius: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
         overflow: auto;
+        background: #fff;
       }
 
       table {
-        border-collapse: collapse;
-        min-width: 1280px;
         width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
       }
 
       th,
       td {
-        border-bottom: 1px solid rgba(143, 176, 217, 0.16);
-        padding: 0.75rem;
+        border-bottom: 1px solid #edf2fa;
+        padding: 0.88rem 0.72rem;
         text-align: right;
-        vertical-align: middle;
+        font-size: 0.88rem;
       }
 
       th {
-        background: #0a1b31;
-        color: #cfe4ff;
-        font-size: 0.86rem;
-        position: sticky;
-        top: 0;
-        z-index: 1;
+        background: #f7faff;
+        color: #35547a;
       }
 
       th:first-child,
-      td:first-child,
-      th:last-child,
-      td:last-child {
+      td:first-child {
         text-align: left;
       }
 
-      th span {
-        color: var(--muted);
-        display: block;
-        font-size: 0.76rem;
-        font-weight: 600;
-        margin-top: 0.2rem;
-      }
-
-      .missing {
-        color: var(--muted);
-      }
-
-      .estimate-row td:first-child {
-        color: var(--accent);
-        font-weight: 700;
-      }
-
-      .fill-cell {
-        align-items: center;
-        display: grid;
-        gap: 0.35rem;
-        grid-template-columns: minmax(96px, 1fr) auto;
-      }
-
-      .fill-cell input {
-        min-width: 90px;
-        padding: 0.45rem;
+      .tabular {
         text-align: right;
+        font-variant-numeric: tabular-nums;
       }
 
-      .source {
-        color: var(--muted);
-        font-size: 0.84rem;
+      .estimate-col {
+        background: #f8f4ff;
       }
 
-      .source-chip {
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        color: var(--muted);
-        display: inline-block;
-        font-size: 0.72rem;
-        margin-left: 0.35rem;
-        padding: 0.16rem 0.44rem;
-      }
-
-      .notes {
-        color: var(--muted);
-        line-height: 1.55;
-        margin: 0;
-        padding-left: 1.25rem;
-      }
-
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
+      .alert-list {
+        display: grid;
         gap: 0.45rem;
       }
 
-      pre {
-        background: #0a1628;
-        border: 1px solid var(--line-soft);
-        border-radius: 12px;
-        color: #e5e7eb;
-        overflow: auto;
-        padding: 0.8rem;
-        white-space: pre-wrap;
+      .alert-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0.58rem;
+        cursor: pointer;
+        background: #fff;
       }
 
-      details summary {
-        color: var(--muted);
-        cursor: pointer;
+      .alert-item.active {
+        border-color: #8fb4e2;
+        background: #f2f7ff;
+      }
+
+      .chart-box {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 0.66rem;
+      }
+
+      .banner {
+        margin-bottom: 0.6rem;
+        border-radius: 10px;
+        border: 1px solid #f1d192;
+        background: #fff8e8;
+        color: #885c00;
+        font-size: 0.84rem;
+        padding: 0.55rem 0.68rem;
       }
 
       .error {
-        color: var(--bad);
+        border-radius: 10px;
+        border: 1px solid #f0bcc6;
+        background: #fff4f6;
+        color: #8f2435;
+        padding: 0.7rem;
       }
 
-      .stack {
-        display: grid;
-        gap: 0.85rem;
+      pre {
+        background: #112238;
+        color: #e7edf8;
+        border-radius: 10px;
+        padding: 0.75rem;
+        overflow: auto;
       }
 
-      @media (max-width: 780px) {
-        body {
-          padding: 1rem;
-        }
-
-        .form-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .content-grid {
+      @media (max-width: 980px) {
+        .form-grid,
+        .grid-2 {
           grid-template-columns: 1fr;
         }
       }
@@ -353,325 +285,302 @@
   </head>
   <body>
     <main>
-      <h1>Peaberry Quant Data</h1>
-      <p>
-        국내/해외 종목의 재무 금액, 주당 지표, 배수, % 지표를 별도 단위로 표시합니다.
-        빈 칸은 표시 단위 기준으로 직접 입력해 보완할 수 있습니다.
-      </p>
-      <form id="snapshot-form">
-        <div class="form-grid">
-          <input id="ticker" placeholder="Ticker, e.g. 000660 or AAPL" required />
-          <input id="market" placeholder="Market, e.g. KOSPI or US" />
-          <input id="corp-code" placeholder="OpenDART corp_code" />
-          <input id="years" placeholder="Years, e.g. 2024,2023,2022" />
-          <input id="dart-api-key" placeholder="OpenDART API key (optional)" />
-          <button type="submit">조회</button>
-        </div>
-      </form>
-      <section id="output" class="panel">종목을 입력하면 단위가 주석 처리된 표가 표시됩니다.</section>
+      <section class="surface">
+        <h1>Quant Investment Dashboard</h1>
+        <p class="meta">카드형 레이아웃 · 탭 기반 화면 분리 · API/화면/다운로드 계산 일관성</p>
+        <form id="snapshot-form">
+          <div class="form-grid">
+            <input id="ticker" placeholder="Ticker (e.g. 000660, AAPL)" required />
+            <input id="market" placeholder="Market" />
+            <input id="corp-code" placeholder="corp_code" />
+            <input id="years" placeholder="Years (optional)" />
+            <input id="dart-api-key" placeholder="OpenDART API key (optional)" />
+            <button type="submit">Load</button>
+          </div>
+        </form>
+      </section>
+      <section id="output" class="surface panel">종목을 조회하면 탭형 대시보드가 표시됩니다.</section>
     </main>
     <script>
       const form = document.getElementById("snapshot-form");
       const output = document.getElementById("output");
       let lastSnapshot = null;
+      let lastParams = null;
+      let activeTab = "market-regime";
+      let selectedAlertId = null;
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        const params = collectParams();
+        lastParams = params;
+        await requestSnapshot(params);
+      });
+
+      output.addEventListener("click", (event) => {
+        const tabButton = event.target.closest("[data-tab]");
+        if (tabButton) {
+          activeTab = tabButton.dataset.tab;
+          renderSnapshot(lastSnapshot);
+          return;
+        }
+        const alertItem = event.target.closest("[data-alert-id]");
+        if (alertItem) {
+          selectedAlertId = alertItem.dataset.alertId;
+          renderSnapshot(lastSnapshot);
+          return;
+        }
+        if (event.target.id === "download-csv" || event.target.id === "download-excel") {
+          if (!lastSnapshot || !lastParams) return;
+          const format = event.target.id === "download-csv" ? "csv" : "excel";
+          const query = new URLSearchParams(lastParams.query);
+          query.set("format", format);
+          window.open(`/api/snapshot/${encodeURIComponent(lastSnapshot.security.ticker)}/download?${query.toString()}`, "_blank");
+        }
+      });
+
+      async function requestSnapshot(params) {
+        output.textContent = "Loading...";
+        try {
+          const response = await fetch(`/api/snapshot/${encodeURIComponent(params.ticker)}?${new URLSearchParams(params.query).toString()}`);
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.detail || "Snapshot request failed");
+          lastSnapshot = payload;
+          selectedAlertId = payload.display?.risk?.selected_alert_id || null;
+          renderSnapshot(payload);
+        } catch (error) {
+          if (lastSnapshot) {
+            renderSnapshot(lastSnapshot, `데이터 갱신 실패로 마지막 정상 데이터(last-known-good)를 표시합니다. 원인: ${error.message}`);
+          } else {
+            output.innerHTML = `<div class="error"><strong>요청 실패</strong><div>${escapeHtml(error.message)}</div></div>`;
+          }
+        }
+      }
+
+      function collectParams() {
         const ticker = document.getElementById("ticker").value.trim();
         const market = document.getElementById("market").value.trim();
         const corpCode = document.getElementById("corp-code").value.trim();
         const years = document.getElementById("years").value.trim();
         const dartApiKey = document.getElementById("dart-api-key").value.trim();
-        const params = new URLSearchParams();
-        if (market) params.set("market", market);
-        if (corpCode) params.set("corp_code", corpCode);
-        if (years) params.set("years", years);
-        if (dartApiKey) params.set("dart_api_key", dartApiKey);
+        const query = {};
+        if (market) query.market = market;
+        if (corpCode) query.corp_code = corpCode;
+        if (years) query.years = years;
+        if (dartApiKey) query.dart_api_key = dartApiKey;
+        return { ticker, query };
+      }
 
-        output.textContent = "Loading...";
-        try {
-          const response = await fetch(`/api/snapshot/${encodeURIComponent(ticker)}?${params.toString()}`);
-          const body = await response.json();
-          if (!response.ok) {
-            throw new Error(body.detail || "Snapshot request failed");
-          }
-          lastSnapshot = body;
-          renderSnapshot(body);
-        } catch (error) {
-          output.innerHTML = `<strong class="error">오류:</strong> ${escapeHtml(error.message)}`;
-        }
-      });
-
-      output.addEventListener("input", (event) => {
-        if (!event.target.matches(".manual-fill")) return;
-        renderFillExport();
-      });
-
-      output.addEventListener("click", (event) => {
-        if (event.target.id === "save-fills") {
-          localStorage.setItem(storageKey(lastSnapshot), JSON.stringify(readManualFills()));
-          renderFillExport("브라우저에 저장했습니다.");
-        }
-        if (event.target.id === "clear-fills") {
-          localStorage.removeItem(storageKey(lastSnapshot));
-          renderSnapshot(lastSnapshot);
-        }
-      });
-
-      function renderSnapshot(snapshot) {
-        const display = snapshot.display;
-        const fills = loadManualFills(snapshot);
-        const completeness = completenessScore(display);
+      function renderSnapshot(snapshot, warning = "") {
+        if (!snapshot) return;
+        const display = snapshot.display || {};
+        const meta = display.meta || {};
+        const fair = display.fair_value || {};
         const diagnostics = snapshot.diagnostics || [];
         output.innerHTML = `
-          <div class="dashboard">
+          ${warning ? `<div class="banner">${escapeHtml(warning)}</div>` : ""}
+          ${diagnostics.length ? `<div class="banner">외부 데이터 취득 실패: ${diagnostics.map(escapeHtml).join(" | ")}</div>` : ""}
           <div class="kpi-grid">
-            ${summaryCard("종목", `${snapshot.security.name || ""} ${snapshot.security.ticker}`.trim())}
-            ${summaryCard("시장", display.market.market || display.market.kind)}
-            ${summaryCard("현재가", formatWithUnit(snapshot.quote?.price, snapshot.quote?.currency))}
-            ${summaryCard("자료원", sourceLabel(snapshot))}
-            ${summaryCard("데이터 완성도", completenessPill(completeness))}
+            ${kpi("Ticker", snapshot.security.ticker, "neutral")}
+            ${kpi("Current", `${fair.current_price_formatted || "-"} ${snapshot.quote?.currency || ""}`, trend(fair.disparity_pct))}
+            ${kpi("Fair Value", `${fair.fair_value_formatted || "-"} ${snapshot.quote?.currency || ""}`, trend(fair.disparity_pct))}
+            ${kpi("Disparity", `${fair.disparity_pct_formatted || "-"}%`, trend(fair.disparity_pct))}
+            ${kpi("Source", meta.source || "-", "neutral")}
+            ${kpi("Confidence", formatPercent(meta.confidence), confidenceTrend(meta.confidence))}
           </div>
-          ${diagnosticsBanner(diagnostics)}
-          <div class="content-grid">
-            <section class="surface stack">
-              <div>
-                <div class="section-head">
-                  <h2>단위/계산 체계</h2>
-                  <span class="status-pill">raw → display</span>
-                </div>
-                <div class="unit-grid">
-                  ${unitCard("매출/영업이익/순이익", display.units.amount.display, `${display.units.amount.raw} 원자료 ÷ ${display.units.amount.divisor.toLocaleString()}`)}
-                  ${unitCard("EPS/BPS", display.units.per_share.display, "주당 지표")}
-                  ${unitCard("PER/PBR", display.units.multiple.display, "배수")}
-                  ${unitCard("ROE", display.units.percent.display, "순이익 ÷ 자본총계")}
-                </div>
-              </div>
-              <div>
-                <div class="section-head">
-                  <h2>연간 재무 정보</h2>
-                  <p>추정치 기간은 (E)로 표시</p>
-                </div>
-                ${annualTable(display, fills)}
-              </div>
-            </section>
-            <aside class="surface stack">
-              <div>
-                <div class="section-head">
-                  <h3>밸류에이션 / 추정</h3>
-                </div>
-                <div class="valuation-grid">${valuationCards(display.valuation_items, fills)}</div>
-              </div>
-              <div>
-                <div class="section-head">
-                  <h3>수동 보정</h3>
-                </div>
-                <div class="actions">
-                  <button type="button" id="save-fills">빈 칸 저장</button>
-                  <button type="button" class="secondary" id="clear-fills">저장값 지우기</button>
-                </div>
-                <pre id="fill-export"></pre>
-              </div>
-            </aside>
+          <p class="meta" style="margin-top:0.55rem;">as-of: ${escapeHtml(meta.as_of || "-")} · delay: ${escapeHtml(String(meta.delay_sec ?? "-"))} sec</p>
+          <div style="margin-top:0.65rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+            <button type="button" class="secondary" id="download-csv">CSV 다운로드</button>
+            <button type="button" class="secondary" id="download-excel">Excel 다운로드</button>
           </div>
-          <details>
-            <summary>Raw API response</summary>
-            <pre>${escapeHtml(JSON.stringify(snapshot, null, 2))}</pre>
-          </details>
-          <div class="surface">
-            <div class="section-head">
-              <h3>해석 참고</h3>
-            </div>
-            <ul class="notes">${display.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
-          </div>
-          </div>
+          <div class="tabs">${(display.tabs || []).map((tab) => `<button type="button" class="tab-btn ${tab.id === activeTab ? "active" : ""}" data-tab="${escapeHtml(tab.id)}">${escapeHtml(tab.label)}</button>`).join("")}</div>
+          ${tabSection("market-regime", marketRegimeMarkup(display.market_regime), activeTab)}
+          ${tabSection("holdings", holdingsMarkup(display.holdings || [], display.holdings_policy || {}), activeTab)}
+          ${tabSection("fair-value", fairValueMarkup(fair), activeTab)}
+          ${tabSection("risk", riskMarkup(display.risk || {}), activeTab)}
+          ${tabSection("performance", performanceMarkup(display.portfolio_performance || {}), activeTab)}
+          <details style="margin-top:0.7rem;"><summary class="meta">Raw response</summary><pre>${escapeHtml(JSON.stringify(snapshot, null, 2))}</pre></details>
+          <ul>${(display.notes || []).map((note) => `<li class="meta">${escapeHtml(note)}</li>`).join("")}</ul>
         `;
-        for (const input of output.querySelectorAll(".manual-fill")) {
-          input.value = fills[input.dataset.fillKey] ?? "";
-        }
-        renderFillExport();
       }
 
-      function annualTable(display, fills) {
-        const amountUnit = escapeHtml(display.units.amount.display);
-        const perShareUnit = escapeHtml(display.units.per_share.display);
-        const multipleUnit = escapeHtml(display.units.multiple.display);
-        const percentUnit = escapeHtml(display.units.percent.display);
-        const rows = display.annual_rows.map((row) => `
-          <tr class="${row.is_estimate ? "estimate-row" : ""}">
-            <td>${escapeHtml(row.period || `${row.year}.12`)}</td>
-            ${valueCell(row.values.revenue, fillKey(row.values.revenue.fill), fills)}
-            ${valueCell(row.values.operating_income, fillKey(row.values.operating_income.fill), fills)}
-            ${valueCell(row.values.net_income, fillKey(row.values.net_income.fill), fills)}
-            ${valueCell(row.values.roe, fillKey(row.values.roe.fill), fills)}
-            ${valueCell(row.values.eps, fillKey(row.values.eps.fill), fills)}
-            ${valueCell(row.values.per, fillKey(row.values.per.fill), fills)}
-            ${valueCell(row.values.bps, fillKey(row.values.bps.fill), fills)}
-            ${valueCell(row.values.pbr, fillKey(row.values.pbr.fill), fills)}
-            <td class="source">${escapeHtml(row.source || "-")}${sourceChips(row)}</td>
-          </tr>
-        `).join("");
+      function tabSection(id, inner, current) {
+        return `<section class="tab-content ${id === current ? "active" : ""}">${inner}</section>`;
+      }
+
+      function kpi(label, value, cls) {
+        return `<article class="card"><span class="label">${escapeHtml(label)}</span><span class="value tabular">${escapeHtml(value)}</span><span class="status ${escapeHtml(cls)}">${escapeHtml(cls.toUpperCase())}</span></article>`;
+      }
+
+      function marketRegimeMarkup(regime = {}) {
+        const indicators = regime.indicators || [];
         return `
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>기간</th>
-                  <th>매출<span>${amountUnit}</span></th>
-                  <th>영업이익<span>${amountUnit}</span></th>
-                  <th>순이익<span>${amountUnit}</span></th>
-                  <th>ROE<span>${percentUnit}</span></th>
-                  <th>EPS<span>${perShareUnit}</span></th>
-                  <th>PER<span>${multipleUnit}</span></th>
-                  <th>BPS<span>${perShareUnit}</span></th>
-                  <th>PBR<span>${multipleUnit}</span></th>
-                  <th>자료원</th>
-                </tr>
-              </thead>
-              <tbody>${rows}</tbody>
-            </table>
+          <div class="grid-2">
+            <article class="card">
+              <h3>Market Regime Board</h3>
+              <p class="meta">state: ${escapeHtml(regime.state || "unknown")}</p>
+              <div style="margin-top:0.55rem; display:grid; gap:0.42rem;">
+                ${indicators.map((item) => `<div style="display:flex; justify-content:space-between; align-items:center;"><span class="label">${escapeHtml(item.label)}</span><strong class="tabular">${escapeHtml(item.value)}</strong><span class="status ${escapeHtml(item.status || "neutral")}">${escapeHtml((item.status || "neutral").toUpperCase())}</span></div>`).join("")}
+              </div>
+            </article>
+            <article class="card">
+              <h3>Metadata</h3>
+              <p class="meta">source / as-of / delay_sec / confidence</p>
+              <div style="margin-top:0.55rem; display:grid; gap:0.38rem;">
+                <div><span class="label">Source</span><strong>${escapeHtml(regime.meta?.source || "-")}</strong></div>
+                <div><span class="label">As-of</span><strong>${escapeHtml(regime.meta?.as_of || "-")}</strong></div>
+                <div><span class="label">Delay(sec)</span><strong class="tabular">${escapeHtml(String(regime.meta?.delay_sec ?? "-"))}</strong></div>
+                <div><span class="label">Confidence</span><strong class="tabular">${escapeHtml(formatPercent(regime.meta?.confidence))}</strong></div>
+              </div>
+            </article>
           </div>
         `;
       }
 
-      function valuationCards(items, fills) {
-        return items.map((item) => {
-          const key = fillKey(item.value.fill);
-          return `
-            <div class="card">
-              <span class="label">${escapeHtml(item.label)} <span class="unit">${escapeHtml(item.value.unit)}</span></span>
-              ${valueCell(item.value, key, fills, true)}
-              <div class="source">${escapeHtml(item.source || "-")}${item.is_fallback ? '<span class="source-chip">fallback</span>' : ""}</div>
+      function holdingsMarkup(holdings, policy) {
+        if (!holdings.length) return `<div class="error">보유 종목 데이터가 없습니다.</div>`;
+        return `
+          <article class="card">
+            <h3>Holdings</h3>
+            <p class="meta">비중 기준: ${escapeHtml(policy.weight_basis || "-")} · 현금 포함: ${policy.include_cash ? "Y" : "N"} · 반올림: ${escapeHtml(policy.rounding_mode || "-")}(${escapeHtml(String(policy.rounding_digits ?? "-"))}자리)</p>
+            <div class="table-wrap" style="margin-top:0.58rem;">
+              <table>
+                <thead><tr><th>Symbol</th><th>Market Value</th><th>Weight %</th><th>Return %</th><th>Daily %</th><th>Status</th></tr></thead>
+                <tbody>
+                  ${holdings.map((row) => `
+                    <tr>
+                      <td>${escapeHtml(row.name || row.symbol)}</td>
+                      <td class="tabular">${escapeHtml(row.market_value_formatted || "-")}</td>
+                      <td class="tabular">${escapeHtml(row.weight_formatted || "-")}</td>
+                      <td class="tabular">${escapeHtml(row.return_formatted || "-")}</td>
+                      <td class="tabular">${escapeHtml(row.daily_change_formatted || "-")}</td>
+                      <td><span class="status ${escapeHtml(trend(row.return_pct))}">${escapeHtml(trend(row.return_pct).toUpperCase())}</span></td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
             </div>
-          `;
+            <p class="meta" style="margin-top:0.45rem;">총합 비중: <strong class="tabular">${escapeHtml(formatNumber(policy.weight_sum))}%</strong></p>
+          </article>
+        `;
+      }
+
+      function fairValueMarkup(fair) {
+        if (!fair || !fair.rows) return `<div class="error">Fair Value 데이터가 없습니다.</div>`;
+        return `
+          <article class="card">
+            <h3>Fair Value Analysis (5A + 2E)</h3>
+            <p class="meta">공식: ${escapeHtml(fair.policy?.formula || "-")}</p>
+            <div class="table-wrap" style="margin-top:0.58rem;">
+              <table>
+                <thead><tr><th>Period</th><th>Type</th><th>Revenue</th><th>EPS</th><th>PER</th><th>ROE</th><th>Current</th><th>Fair</th><th>Disparity%</th><th>Signal</th></tr></thead>
+                <tbody>
+                  ${fair.rows.map((row) => `
+                    <tr class="${row.kind === "E" ? "estimate-col" : ""}">
+                      <td>${escapeHtml(row.period)}</td>
+                      <td>${escapeHtml(row.kind)}</td>
+                      <td class="tabular">${escapeHtml(row.revenue)}</td>
+                      <td class="tabular">${escapeHtml(row.eps)}</td>
+                      <td class="tabular">${escapeHtml(row.per)}</td>
+                      <td class="tabular">${escapeHtml(row.roe)}</td>
+                      <td class="tabular">${escapeHtml(row.current_price)}</td>
+                      <td class="tabular">${escapeHtml(row.fair_value)}</td>
+                      <td class="tabular">${escapeHtml(row.disparity_pct)}</td>
+                      <td><span class="status ${escapeHtml(trend(parseMetric(row.disparity_pct)))}">${escapeHtml(String(row.signal).toUpperCase())}</span></td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        `;
+      }
+
+      function riskMarkup(risk) {
+        const metrics = risk.metrics || {};
+        const alerts = risk.alerts || [];
+        const selected = alerts.find((item) => item.id === selectedAlertId) || alerts[0];
+        if (selected) selectedAlertId = selected.id;
+        return `
+          <div class="grid-2">
+            <article class="card">
+              <h3>Risk Monitor</h3>
+              <div style="margin-top:0.6rem; display:grid; gap:0.4rem;">
+                ${Object.entries(metrics).map(([name, item]) => `<div style="display:flex; justify-content:space-between; align-items:center;"><span class="label">${escapeHtml(name)}</span><strong class="tabular">${escapeHtml(formatNumber(item.value))}%</strong><span class="status ${escapeHtml(item.status || "neutral")}">${escapeHtml(String(item.status || "neutral").toUpperCase())}</span></div>`).join("")}
+              </div>
+              <h3 style="margin-top:0.76rem;">Alerts</h3>
+              <div class="alert-list" style="margin-top:0.4rem;">
+                ${alerts.map((item) => `<div class="alert-item ${selected && selected.id === item.id ? "active" : ""}" data-alert-id="${escapeHtml(item.id)}"><div style="display:flex; justify-content:space-between;"><strong>${escapeHtml(item.title)}</strong><span class="status ${escapeHtml(item.severity === "high" ? "risk" : item.severity === "medium" ? "down" : "neutral")}">${escapeHtml(item.severity.toUpperCase())}</span></div><p class="meta">${escapeHtml(item.summary)}</p></div>`).join("") || `<div class="meta">활성 경고 없음</div>`}
+              </div>
+            </article>
+            <article class="card">
+              <h3>Risk Drill-down</h3>
+              ${selected ? `
+                <p class="meta">${escapeHtml(selected.summary)}</p>
+                <div style="margin-top:0.48rem;"><span class="label">원인 팩터</span><ul>${(selected.factors || []).map((factor) => `<li class="meta">${escapeHtml(factor)}</li>`).join("")}</ul></div>
+                <div style="margin-top:0.48rem;"><span class="label">기여종목 Top N</span><ul>${(selected.contributors || []).map((item) => `<li class="meta">${escapeHtml(item.symbol)} / ${escapeHtml(formatNumber(item.weight_percent))}%</li>`).join("") || "<li class='meta'>-</li>"}</ul></div>
+                <div style="margin-top:0.48rem;"><span class="label">영향도</span><p class="meta">${escapeHtml(selected.impact || "-")}</p></div>
+                <div style="margin-top:0.48rem;"><span class="label">권장 액션</span><ul>${(selected.actions || []).map((action) => `<li class="meta">${escapeHtml(action)}</li>`).join("")}</ul></div>
+              ` : `<p class="meta">선택된 경고가 없습니다.</p>`}
+            </article>
+          </div>
+        `;
+      }
+
+      function performanceMarkup(perf) {
+        const months = perf.months || [];
+        const series = perf.series || [];
+        if (!months.length || !series.length) return `<div class="error">성과 데이터가 없습니다.</div>`;
+        return `<article class="card"><h3>Portfolio Performance</h3><p class="meta">시리즈별 색상/패턴(실선/점선) 적용</p><div class="chart-box" style="margin-top:0.55rem;">${chartSvg(months, series)}</div></article>`;
+      }
+
+      function chartSvg(months, series) {
+        const width = 980;
+        const height = 280;
+        const pad = 40;
+        const values = series.flatMap((item) => item.values || []);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = Math.max(1, max - min);
+        const xStep = (width - pad * 2) / Math.max(1, months.length - 1);
+        const y = (value) => height - pad - ((value - min) / range) * (height - pad * 2);
+        const lines = series.map((item, idx) => {
+          const points = (item.values || []).map((value, i) => `${pad + i * xStep},${y(value)}`).join(" ");
+          const color = idx === 0 ? "#1f4f92" : "#6f7f95";
+          const dash = item.pattern === "dashed" ? "6 6" : "none";
+          return `<polyline fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${dash}" points="${points}" />`;
         }).join("");
+        const labels = months.map((month, i) => `<text x="${pad + i * xStep}" y="${height - 10}" text-anchor="middle" fill="#7488a3" font-size="11">${escapeHtml(month)}</text>`).join("");
+        return `<svg viewBox="0 0 ${width} ${height}" width="100%" height="280">${lines}${labels}</svg>`;
       }
 
-      function valueCell(cell, key, fills, block = false) {
-        if (!cell.is_missing) {
-          return block
-            ? `<div class="value">${escapeHtml(cell.formatted)}<span class="unit">${escapeHtml(cell.unit)}</span></div>`
-            : `<td>${escapeHtml(cell.formatted)}<span class="unit">${escapeHtml(cell.unit)}</span></td>`;
-        }
-        const manual = key && fills[key] ? fills[key] : "";
-        const control = `
-          <div class="fill-cell">
-            <input class="manual-fill" data-fill-key="${escapeHtml(key)}" placeholder="${escapeHtml(cell.unit)} 입력" value="${escapeHtml(manual)}" />
-            <span class="unit">${escapeHtml(cell.unit)}</span>
-          </div>
-        `;
-        return block ? control : `<td class="missing">${control}</td>`;
+      function trend(value) {
+        if (value === null || value === undefined || Number.isNaN(Number(value))) return "neutral";
+        if (Number(value) > 0) return "up";
+        if (Number(value) < 0) return "down";
+        return "neutral";
       }
 
-      function renderFillExport(message = "") {
-        const element = document.getElementById("fill-export");
-        if (!element || !lastSnapshot) return;
-        const fills = readManualFills();
-        const payload = {
-          ticker: lastSnapshot.security.ticker,
-          market: lastSnapshot.security.market,
-          input_scale: "display",
-          manual_fills: fills,
-        };
-        const prefix = message ? `${message}\n\n` : "";
-        element.textContent = `${prefix}입력한 빈 칸(JSON):\n${JSON.stringify(payload, null, 2)}`;
+      function confidenceTrend(value) {
+        if (value === null || value === undefined) return "neutral";
+        if (value >= 0.85) return "up";
+        if (value >= 0.65) return "neutral";
+        return "risk";
       }
 
-      function readManualFills() {
-        const fills = {};
-        for (const input of output.querySelectorAll(".manual-fill")) {
-          const value = input.value.trim();
-          if (value) fills[input.dataset.fillKey] = value;
-        }
-        return fills;
+      function formatNumber(value) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return "-";
+        return num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       }
 
-      function loadManualFills(snapshot) {
-        try {
-          return JSON.parse(localStorage.getItem(storageKey(snapshot)) || "{}");
-        } catch {
-          return {};
-        }
-      }
-
-      function storageKey(snapshot) {
-        if (!snapshot) return "peaberry:fills";
-        const years = snapshot.display.annual_rows.map((row) => row.year).join(",");
-        return `peaberry:fills:${snapshot.security.ticker}:${snapshot.security.market || ""}:${years}`;
-      }
-
-      function fillKey(fill) {
-        if (!fill) return "";
-        return [fill.scope, fill.year || "current", fill.field].join(".");
-      }
-
-      function summaryCard(label, value) {
-        let meta = "";
-        let text = value;
-        if (typeof value === "object" && value !== null) {
-          meta = value.meta || "";
-          text = value.text || "-";
-        }
-        return `
-          <div class="card">
-            <span class="label">${escapeHtml(label)}</span>
-            <span class="value">${escapeHtml(text || "-")}</span>
-            ${meta ? `<div class="source">${meta}</div>` : ""}
-          </div>
-        `;
-      }
-
-      function unitCard(label, unit, note) {
-        return `<div class="unit-card"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(unit)}</span><p>${escapeHtml(note)}</p></div>`;
-      }
-
-      function sourceLabel(snapshot) {
-        const sources = new Set();
-        if (snapshot.quote?.source) sources.add(snapshot.quote.source);
-        if (snapshot.valuation?.source) sources.add(snapshot.valuation.source);
-        for (const row of snapshot.annual_financials || []) sources.add(row.source);
-        return [...sources].join(" + ") || "-";
-      }
-
-      function formatWithUnit(value, unit) {
+      function formatPercent(value) {
         if (value === null || value === undefined) return "-";
-        return `${Number(value).toLocaleString()} ${unit || ""}`.trim();
+        return `${formatNumber(Number(value) * 100)}%`;
       }
 
-      function sourceChips(row) {
-        const chips = [];
-        if (row.is_estimate) chips.push('<span class="source-chip">estimate</span>');
-        if (row.is_fallback) chips.push('<span class="source-chip">fallback</span>');
-        return chips.join("");
-      }
-
-      function completenessScore(display) {
-        const annualCount = display.annual_rows.length;
-        const annualMetrics = 8;
-        const valuationCount = display.valuation_items.length;
-        const total = annualCount * annualMetrics + valuationCount;
-        const missing = (display.missing_fields || []).length;
-        if (total <= 0) return 0;
-        return Math.max(0, Math.min(100, Math.round(((total - missing) / total) * 100)));
-      }
-
-      function completenessPill(score) {
-        if (score >= 85) return { text: `${score}%`, meta: '<span class="status-pill good">stable</span>' };
-        if (score >= 60) return { text: `${score}%`, meta: '<span class="status-pill warn">partial</span>' };
-        return { text: `${score}%`, meta: '<span class="status-pill bad">sparse</span>' };
-      }
-
-      function diagnosticsBanner(diagnostics) {
-        if (!diagnostics || diagnostics.length === 0) return "";
-        return `
-          <div class="diagnostics">
-            <div class="section-head">
-              <h3>수집 진단</h3>
-              <span class="status-pill bad">check required</span>
-            </div>
-            <ul>${diagnostics.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-          </div>
-        `;
+      function parseMetric(value) {
+        if (value === null || value === undefined) return NaN;
+        return Number(String(value).replaceAll(",", ""));
       }
 
       function escapeHtml(value) {
