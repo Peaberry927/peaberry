@@ -17,6 +17,7 @@ from app.storage import SQLiteStore
 
 DATABASE_PATH = os.getenv("PEABERRY_DATABASE_PATH", "peaberry.db")
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+PROPOSAL_DOC_PATH = Path(__file__).resolve().parent.parent / "Quant_System_Implementation_Proposal_v2.docx"
 
 app = FastAPI(title="Peaberry Quant Data API")
 pipeline = QuantDataPipeline(store=SQLiteStore(DATABASE_PATH))
@@ -84,6 +85,17 @@ def snapshot_download(
         content=csv_text,
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/api/proposal/download")
+def proposal_download() -> FileResponse:
+    if not PROPOSAL_DOC_PATH.exists():
+        raise HTTPException(status_code=404, detail="Proposal document not found")
+    return FileResponse(
+        PROPOSAL_DOC_PATH,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename=PROPOSAL_DOC_PATH.name,
     )
 
 

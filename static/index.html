@@ -336,6 +336,9 @@
           query.set("format", format);
           window.open(`/api/snapshot/${encodeURIComponent(lastSnapshot.security.ticker)}/download?${query.toString()}`, "_blank");
         }
+        if (event.target.id === "download-proposal") {
+          window.open("/api/proposal/download", "_blank");
+        }
       });
 
       async function requestSnapshot(params) {
@@ -391,6 +394,7 @@
           <div style="margin-top:0.65rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
             <button type="button" class="secondary" id="download-csv">CSV 다운로드</button>
             <button type="button" class="secondary" id="download-excel">Excel 다운로드</button>
+            <button type="button" class="secondary" id="download-proposal">제안서 다운로드 (DOCX)</button>
           </div>
           <div class="tabs">${(display.tabs || []).map((tab) => `<button type="button" class="tab-btn ${tab.id === activeTab ? "active" : ""}" data-tab="${escapeHtml(tab.id)}">${escapeHtml(tab.label)}</button>`).join("")}</div>
           ${tabSection("market-regime", marketRegimeMarkup(display.market_regime), activeTab)}
