@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from app.main import _snapshot_export_csv
+from app.export import snapshot_export_csv
 
 
 class ExportTests(unittest.TestCase):
@@ -32,7 +32,7 @@ class ExportTests(unittest.TestCase):
             },
         }
 
-        csv_text = _snapshot_export_csv(display)
+        csv_text = snapshot_export_csv(display)
 
         self.assertIn("fair_value,disparity_pct,20.00,%", csv_text)
         self.assertIn("holdings,AAA,40.00,%", csv_text)
